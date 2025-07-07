@@ -2,11 +2,9 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 from datetime import datetime
-from db import init_db, add_book, get_all_books, update_book_metadata_full, delete_book
+from db import add_book, get_all_books, update_book_metadata_full, delete_book
 from openlibrary import search_books
 
-# Initialize DB
-init_db()
 st.set_page_config(page_title="Book Tracker", layout="wide")
 st.title("📚 Book Tracker")
 
