@@ -1,95 +1,52 @@
-# db.py
-import sqlite3
+# db.py (Supabase version)
+from supabase import create_client
+import os
 
-DB_FILE = "books.db"
+# Supabase credentials (use env vars in production)
+SUPABASE_URL = os.getenv("SUPABASE_URL") or "https://your-project-id.supabase.co"
+SUPABASE_KEY = os.getenv("SUPABASE_KEY") or "your-anon-public-key"
 
-def init_db():
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS books (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT,
-                author TEXT,
-                publisher TEXT,
-                pub_year INTEGER,
-                pages INTEGER,
-                genre TEXT,
-                author_gender TEXT,
-                fiction_nonfiction TEXT,
-                tags TEXT,
-                date_finished TEXT,
-                cover_url TEXT,
-                openlibrary_id TEXT,
-                isbn TEXT,
-                word_count INTEGER
-            );
-        """)
-        # Migration if column is missing (safe for reruns)
-        try:
-            cursor.execute("ALTER TABLE books ADD COLUMN word_count INTEGER")
-        except sqlite3.OperationalError:
-            pass  # Column already exists
-        conn.commit()
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def add_book(book_data):
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        pages = book_data.get("pages") or 0
-        word_count = int(pages) * 250 if pages else None
-        book_data["word_count"] = word_count
-        cursor.execute("""
-            INSERT INTO books (
-                title, author, publisher, pub_year, pages, genre,
-                author_gender, fiction_nonfiction, tags,
-                date_finished, cover_url, openlibrary_id, isbn, word_count
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-        """, tuple(book_data.values()))
-        conn.commit()
-        
+    response = supabase.table("books").insert(book_data).execute()
+    if response.error:
+        print("❌ Error adding book:", response.error)
+    else:
+        print("✅ Book added")
+
 def get_all_books():
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM books ORDER BY date_finished DESC, id DESC;")
-        return cursor.fetchall()
+    response = supabase.table("books").select("*").order("date_finished", desc=True).execute()
+    if response.error:
+        print("❌ Error fetching books:", response.error)
+        return []
+    return response.data
 
-def update_book_metadata_full(book_id, title, author, publisher, pub_year, pages,
-                              genre, gender, fiction, tags, date_finished,
-                              isbn, openlibrary_id):
-    word_count = pages * 250 if pages else None
-
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE books
-            SET
-                title = ?,
-                author = ?,
-                publisher = ?,
-                pub_year = ?,
-                pages = ?,
-                genre = ?,
-                author_gender = ?,
-                fiction_nonfiction = ?,
-                tags = ?,
-                date_finished = ?,
-                isbn = ?,
-                openlibrary_id = ?,
-                word_count = ?
-            WHERE id = ?
-        """, (
-            title, author, publisher, pub_year, pages, genre,
-            gender, fiction, tags, date_finished,
-            isbn, openlibrary_id, word_count, book_id
-        ))
-        conn.commit()
-
-
+def update_book_metadata_full(book_id, title, author, publisher, pub_year, pages, genre, gender, fiction, tags, date_finished, isbn, openlibrary_id):
+    update_data = {
+        "title": title,
+        "author": author,
+        "publisher": publisher,
+        "pub_year": pub_year,
+        "pages": pages,
+        "genre": genre,
+        "author_gender": gender,
+        "fiction_nonfiction": fiction,
+        "tags": tags,
+        "date_finished": date_finished,
+        "isbn": isbn,
+        "openlibrary_id": openlibrary_id,
+        "word_count": pages * 250 if pages else None
+    }
+    response = supabase.table("books").update(update_data).eq("id", book_id).execute()
+    if response.error:
+        print("❌ Error updating book:", response.error)
+    else:
+        print("✅ Book updated")
 
 def delete_book(book_id):
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM books WHERE id = ?", (book_id,))
-        conn.commit()
-
-
+    response = supabase.table("books").delete().eq("id", book_id).execute()
+    if response.error:
+        print("❌ Error deleting book:", response.error)
+    else:
+        print("✅ Book deleted")
