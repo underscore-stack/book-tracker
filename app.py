@@ -352,12 +352,20 @@ try:
     summary = summary.drop_duplicates(subset=["year"])
 
     summary["Longest Book"] = summary.apply(
-        lambda row: f"<strong>{row['title_long']}</strong> by {row['author_long']} ({int(row['pages_long'])} pages)",
+        lambda row: (
+            f"<strong>{row['title_long']}</strong> by {row['author_long']} "
+            f"({int(row['pages_long'])} pages)"
+            if pd.notnull(row["pages_long"]) else "—"
+        ),
         axis=1
     )
     summary["Shortest Book"] = summary.apply(
-        lambda row: f"<strong>{row['title_short']}</strong> by {row['author_short']} ({int(row['pages_short'])} pages)",
-        axis=1
+    lambda row: (
+        f"<strong>{row['title_short']}</strong> by {row['author_short']} "
+        f"({int(row['pages_short'])} pages)"
+        if pd.notnull(row["pages_short"]) else "—"
+    ),
+    axis=1
     )
 
     summary = summary[["year", "Longest Book", "Shortest Book"]].rename(columns={"year": "Year"})
