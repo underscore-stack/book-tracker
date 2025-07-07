@@ -11,6 +11,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 def add_book(book_data):
     try:
         supabase.table("books").insert(book_data).execute()
+        print("📦 Response:", response)
         print("✅ Book added")
     except Exception as e:
         print("❌ Error adding book:", e)
