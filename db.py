@@ -9,18 +9,19 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY") or "your-anon-public-key"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def add_book(book_data):
-    response = supabase.table("books").insert(book_data).execute()
-    if response.error:
-        print("❌ Error adding book:", response.error)
-    else:
+    try:
+        supabase.table("books").insert(book_data).execute()
         print("✅ Book added")
+    except Exception as e:
+        print("❌ Error adding book:", e)
 
 def get_all_books():
-    response = supabase.table("books").select("*").order("date_finished", desc=True).execute()
-    if response.error:
-        print("❌ Error fetching books:", response.error)
+    try:
+        response = supabase.table("books").select("*").order("date_finished", desc=True).execute()
+        return response.data
+    except Exception as e:
+        print("❌ Error fetching books:", e)
         return []
-    return response.data
 
 def update_book_metadata_full(book_id, title, author, publisher, pub_year, pages, genre, gender, fiction, tags, date_finished, isbn, openlibrary_id):
     update_data = {
@@ -38,15 +39,15 @@ def update_book_metadata_full(book_id, title, author, publisher, pub_year, pages
         "openlibrary_id": openlibrary_id,
         "word_count": pages * 250 if pages else None
     }
-    response = supabase.table("books").update(update_data).eq("id", book_id).execute()
-    if response.error:
-        print("❌ Error updating book:", response.error)
-    else:
+    try:
+        supabase.table("books").update(update_data).eq("id", book_id).execute()
         print("✅ Book updated")
+    except Exception as e:
+        print("❌ Error updating book:", e)
 
 def delete_book(book_id):
-    response = supabase.table("books").delete().eq("id", book_id).execute()
-    if response.error:
-        print("❌ Error deleting book:", response.error)
-    else:
+    try:
+        supabase.table("books").delete().eq("id", book_id).execute()
         print("✅ Book deleted")
+    except Exception as e:
+        print("❌ Error deleting book:", e)
