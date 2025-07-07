@@ -17,7 +17,7 @@ def add_book(book_data):
 
 def get_all_books():
     try:
-        response = supabase.table("books").select("*").order("date_finished", desc=True).execute()
+        response = supabase.table("books").select("*").order("id", desc=True).execute()
         return response.data
     except Exception as e:
         print("❌ Error fetching books:", e)
