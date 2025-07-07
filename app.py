@@ -331,56 +331,40 @@ if filtered_books:
         with col2:
             st.altair_chart(chart_cum_books, use_container_width=True)
 
-# 📚 Longest and Shortest Book Per Year Table
 try:
     summary = df.dropna(subset=["pages", "year"]).copy()
     summary["pages"] = pd.to_numeric(summary["pages"], errors="coerce")
     summary["year"] = pd.to_numeric(summary["year"], errors="coerce")
     summary = summary.dropna(subset=["pages", "year"])
 
-    idx_max = summary.groupby("year")["pages"].idxmax()
-    idx_min = summary.groupby("year")["pages"].idxmin()
-    
-    long_rows = summary.loc[idx_max]
-    short_rows = summary.loc[idx_min]
-    
-    summary = summary.drop_duplicates(subset=["year"]).copy()
-    
-    summary = summary.merge(long_rows[["year", "title", "author", "pages"]]
-                            .rename(columns={"title": "title_long", "author": "author_long", "pages": "pages_long"}),
-                            on="year", how="left")
-    
-    summary = summary.merge(short_rows[["year", "title", "author", "pages"]]
-                            .rename(columns={"title": "title_short", "author": "author_short", "pages": "pages_short"}),
-                            on="year", how="left")
+    # Find longest and shortest per year
+    longest = summary.loc[summary.groupby("year")["pages"].idxmax()].copy()
+    shortest = summary.loc[summary.groupby("year")["pages"].idxmin()].copy()
 
-
-    summary["title_short"] = summary.loc[idx_min]["title"]
-    summary["author_short"] = summary.loc[idx_min]["author"]
-    summary["pages_short"] = summary.loc[idx_min]["pages"]
-
-    summary = summary.drop_duplicates(subset=["year"])
-
-    summary["Longest Book"] = summary.apply(
-        lambda row: (
-            f"<strong>{row['title_long']}</strong> by {row['author_long']} "
-            f"({int(row['pages_long'])} pages)"
-            if pd.notnull(row["pages_long"]) else "—"
-        ),
+    # Format display columns
+    longest["Longest Book"] = longest.apply(
+        lambda row: f"<strong>{row['title']}</strong> by {row['author']} ({int(row['pages'])} pages)"
+        if pd.notnull(row["pages"]) else "—",
         axis=1
     )
-    summary["Shortest Book"] = summary.apply(
-    lambda row: (
-        f"<strong>{row['title_short']}</strong> by {row['author_short']} "
-        f"({int(row['pages_short'])} pages)"
-        if pd.notnull(row["pages_short"]) else "—"
-    ),
-    axis=1
+    shortest["Shortest Book"] = shortest.apply(
+        lambda row: f"<strong>{row['title']}</strong> by {row['author']} ({int(row['pages'])} pages)"
+        if pd.notnull(row["pages"]) else "—",
+        axis=1
     )
 
-    summary = summary[["year", "Longest Book", "Shortest Book"]].rename(columns={"year": "Year"})
+    # Merge on year
+    summary = pd.merge(
+        longest[["year", "Longest Book"]],
+        shortest[["year", "Shortest Book"]],
+        on="year",
+        how="outer"
+    ).sort_values("year")
 
-    # 🧾 Render as styled HTML table
+    # Rename for display
+    summary = summary.rename(columns={"year": "Year"})
+
+    # Render
     table_html = summary.to_html(index=False, escape=False)
 
     st.markdown("### 📚 Longest and Shortest Book Per Year")
@@ -403,6 +387,8 @@ try:
 
 except Exception as e:
     st.warning(f"Could not generate longest/shortest book table: {e}")
+
+
 
 for b in filtered_books:
     book_id = b["id"]
