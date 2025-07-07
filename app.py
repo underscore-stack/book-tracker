@@ -340,10 +340,20 @@ try:
 
     idx_max = summary.groupby("year")["pages"].idxmax()
     idx_min = summary.groupby("year")["pages"].idxmin()
+    
+    long_rows = summary.loc[idx_max]
+    short_rows = summary.loc[idx_min]
+    
+    summary = summary.drop_duplicates(subset=["year"]).copy()
+    
+    summary = summary.merge(long_rows[["year", "title", "author", "pages"]]
+                            .rename(columns={"title": "title_long", "author": "author_long", "pages": "pages_long"}),
+                            on="year", how="left")
+    
+    summary = summary.merge(short_rows[["year", "title", "author", "pages"]]
+                            .rename(columns={"title": "title_short", "author": "author_short", "pages": "pages_short"}),
+                            on="year", how="left")
 
-    summary["title_long"] = summary.loc[idx_max]["title"]
-    summary["author_long"] = summary.loc[idx_max]["author"]
-    summary["pages_long"] = summary.loc[idx_max]["pages"]
 
     summary["title_short"] = summary.loc[idx_min]["title"]
     summary["author_short"] = summary.loc[idx_min]["author"]
