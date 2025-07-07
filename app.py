@@ -198,46 +198,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Apply custom style
-styled_html = f"""
-<style>
-.custom-table-container {{
-    width: 75%;
-    margin: 1rem auto;
-}}
-.custom-table-container table {{
-    width: 100%;
-    border-collapse: collapse;
-}}
-.custom-table-container th {{
-    text-align: left;
-    white-space: nowrap;
-    padding: 0.5rem;
-    font-weight: bold;
-}}
-.custom-table-container td {{
-    text-align: center;
-    padding: 0.5rem;
-    vertical-align: middle;
-}}
-.custom-table-container tr:nth-child(even) {{
-    background-color: #f9f9f9;
-}}
-.custom-table-container td:first-child, .custom-table-container th:first-child {{
-    text-align: left;
-    width: 1%;
-    white-space: nowrap;
-}}
-</style>
-<div class="custom-table-container">
-{table_html}
-</div>
-"""
-
-st.markdown("### 🏆 Longest and Shortest Books per Year")
-st.markdown(styled_html, unsafe_allow_html=True)
-
-
 
 
 #visualisations
@@ -371,14 +331,13 @@ if filtered_books:
         with col2:
             st.altair_chart(chart_cum_books, use_container_width=True)
 
-# 🧠 Longest and Shortest Book per Year
+# 📚 Longest and Shortest Book Per Year Table
 try:
     summary = df.dropna(subset=["pages", "year"]).copy()
     summary["pages"] = pd.to_numeric(summary["pages"], errors="coerce")
     summary["year"] = pd.to_numeric(summary["year"], errors="coerce")
     summary = summary.dropna(subset=["pages", "year"])
 
-    # Group by year, then find idx of min/max
     idx_max = summary.groupby("year")["pages"].idxmax()
     idx_min = summary.groupby("year")["pages"].idxmin()
 
@@ -392,7 +351,6 @@ try:
 
     summary = summary.drop_duplicates(subset=["year"])
 
-    # Format as text
     summary["Longest Book"] = summary.apply(
         lambda row: f"<strong>{row['title_long']}</strong> by {row['author_long']} ({int(row['pages_long'])} pages)",
         axis=1
@@ -402,17 +360,28 @@ try:
         axis=1
     )
 
-    # ✅ Display-only columns
-    summary = summary[["year", "Longest Book", "Shortest Book"]]
-    summary = summary.rename(columns={"year": "Year"})
+    summary = summary[["year", "Longest Book", "Shortest Book"]].rename(columns={"year": "Year"})
 
-    # Display with clean style
+    # 🧾 Render as styled HTML table
+    table_html = summary.to_html(index=False, escape=False)
+
     st.markdown("### 📚 Longest and Shortest Book Per Year")
-    st.dataframe(
-        summary.to_html(escape=False, index=False),
-        use_container_width=True,
-        height=(len(summary) + 1) * 35
-    )
+    st.markdown(f"""
+        <style>
+            .custom-table td {{
+                padding: 8px 12px;
+                vertical-align: top;
+            }}
+            .custom-table th {{
+                text-align: left;
+                background-color: #f5f5f5;
+                padding: 10px 12px;
+            }}
+        </style>
+        <div class='custom-table'>
+            {table_html}
+        </div>
+    """, unsafe_allow_html=True)
 
 except Exception as e:
     st.warning(f"Could not generate longest/shortest book table: {e}")
