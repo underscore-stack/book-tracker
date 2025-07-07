@@ -70,7 +70,7 @@ if not books:
     st.info("No books saved yet.")
 else:
     # Extract unique filter values
-    dates = [b[10] for b in books if b[10] and "-" in b[10]]
+    dates = [b["date_finished"] for b in books if b.get("date_finished") and "-" in b["date_finished"]]
     years = sorted({d.split("-")[0] for d in dates})
     month_codes = sorted({d.split("-")[1] for d in dates if len(d.split("-")) > 1})
     months = {
@@ -123,29 +123,33 @@ else:
     filtered_books = []
     for b in books:
         try:
-            if not b[10] or "-" not in b[10]:
+            date_str = b.get("date_finished", "")
+            if not date_str or "-" not in date_str:
                 continue
-            year, month = b[10].split("-")
+    
+            year, month = date_str.split("-")
             if month not in months:
                 continue
-
+    
             month_name = months[month]
-
+    
             year_ok = not st.session_state.selected_years or year in st.session_state.selected_years
             month_ok = not st.session_state.selected_months or month_name in st.session_state.selected_months
-            fiction_ok = not st.session_state.fiction_filter or b[8] in st.session_state.fiction_filter
-            gender_ok = not st.session_state.gender_filter or b[7] in st.session_state.gender_filter
-            tag_ok = not st.session_state.tag_filter or st.session_state.tag_filter.lower() in (b[9] or "").lower()
+            fiction_ok = not st.session_state.fiction_filter or b.get("fiction_nonfiction", "") in st.session_state.fiction_filter
+            gender_ok = not st.session_state.gender_filter or b.get("author_gender", "") in st.session_state.gender_filter
+            tag_ok = not st.session_state.tag_filter or st.session_state.tag_filter.lower() in (b.get("tags") or "").lower()
             search_query = st.session_state.get("search_query", "").strip().lower()
             search_ok = (
                 not search_query or
-                search_query in (b[1] or "").lower() or  # title
-                search_query in (b[2] or "").lower()     # author
+                search_query in (b.get("title") or "").lower() or
+                search_query in (b.get("author") or "").lower()
             )
+    
             if year_ok and month_ok and fiction_ok and gender_ok and tag_ok and search_ok:
                 filtered_books.append(b)
+    
         except Exception as e:
-            st.warning(f"Skipping bad book entry: {b[1]} — {e}")
+            st.warning(f"Skipping bad book entry: {b.get('title', 'Untitled')} — {e}")
 
     st.subheader(f"📚 Showing {len(filtered_books)} book(s)")
 
@@ -279,22 +283,20 @@ st.markdown(styled_html, unsafe_allow_html=True)
 
 #visualisations
 if filtered_books:
-    df = pd.DataFrame(filtered_books, columns=[
+    df = pd.DataFrame(filtered_books)[[
         "id", "title", "author", "publisher", "pub_year", "pages",
         "genre", "author_gender", "fiction_nonfiction", "tags",
         "date_finished", "cover_url", "openlibrary_id", "isbn", "word_count"
-    ])
+    ]]
 
-    # Preprocess date and tags
     df["ym"] = pd.to_datetime(df["date_finished"], format="%Y-%m", errors="coerce")
     df["pages"] = pd.to_numeric(df["pages"], errors="coerce")
-    df = df.dropna(subset=["ym", "pages"])  # remove bad dates/pages
+    df = df.dropna(subset=["ym", "pages"])
 
     df["year"] = df["ym"].dt.year
-    df["month"] = df["ym"].dt.strftime("%b")         # 'Jan', 'Feb', etc.
-    df["month_num"] = df["ym"].dt.month              # For regression and sorting
+    df["month"] = df["ym"].dt.strftime("%b")
+    df["month_num"] = df["ym"].dt.month
 
-    # Order months correctly
     month_order = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     df["month"] = pd.Categorical(df["month"], categories=month_order, ordered=True)
@@ -302,213 +304,111 @@ if filtered_books:
     st.subheader("📈 Reading Analytics")
 
     with st.expander("📊 Show Analytics", expanded=True):
-
-# Pages read per month (with trendlines)
+        # Pages per month + trendlines
         pages_by_month = (
             df.groupby(["year", "month", "month_num"], observed=True)
             .agg({"pages": "sum"})
             .reset_index()
+            .dropna(subset=["month_num", "pages"])
         )
-
-        # Drop missing or zero values to avoid flattening or bad trendlines
-        pages_by_month = pages_by_month.dropna(subset=["month_num", "pages"])
         pages_by_month = pages_by_month[pages_by_month["pages"] > 0]
 
-        # Build chart
         base = alt.Chart(pages_by_month).encode(
-            x=alt.X(
-                "month_num:Q",
-                title="Month",
-                scale=alt.Scale(domain=[1, 12]),
-                axis=alt.Axis(
-                    tickMinStep=1,
-                    values=list(range(1, 13)),
-                    labelExpr='{"1":"Jan","2":"Feb","3":"Mar","4":"Apr","5":"May","6":"Jun","7":"Jul","8":"Aug","9":"Sep","10":"Oct","11":"Nov","12":"Dec"}[datum.value]'
-                )
-            ),
+            x=alt.X("month_num:Q", title="Month", scale=alt.Scale(domain=[1, 12]),
+                    axis=alt.Axis(tickMinStep=1, values=list(range(1, 13)),
+                                  labelExpr='{"1":"Jan","2":"Feb","3":"Mar","4":"Apr","5":"May","6":"Jun","7":"Jul","8":"Aug","9":"Sep","10":"Oct","11":"Nov","12":"Dec"}[datum.value]')),
             y=alt.Y("pages:Q", title="Pages Read"),
             color=alt.Color("year:N", title="Year"),
-            tooltip=[
-                alt.Tooltip("year:N", title="Year"),
-                alt.Tooltip("month:N", title="Month"),
-                alt.Tooltip("pages:Q", title="Pages Read")
-            ]
+            tooltip=["year:N", "month:N", "pages:Q"]
         )
+        combined = (base.mark_line(point=True) +
+                    base.transform_regression("month_num", "pages", groupby=["year"]).mark_line(strokeDash=[4, 2])
+                    ).properties(title="Pages Read per Month by Year").interactive()
 
-        lines = base.mark_line(point=True)
-
-        trend_lines = base.transform_regression(
-            "month_num", "pages", groupby=["year"]
-        ).mark_line(strokeDash=[4, 2])
-
-        combined = (lines + trend_lines).properties(
-            title="Pages Read per Month by Year"
-        ).interactive()
-
-# Books read per month (cleaned and month-aligned)
+        # Books read per month
         books_by_month = (
             df.groupby(["year", "month", "month_num"], observed=True)
             .size()
             .reset_index(name="count")
+            .dropna(subset=["month_num", "count"])
         )
-
-        books_by_month = books_by_month.dropna(subset=["month_num", "count"])
         books_by_month = books_by_month[books_by_month["count"] > 0]
 
         chart_books = alt.Chart(books_by_month).mark_bar().encode(
-            x=alt.X(
-                "month_num:Q",
-                title="Month",
-                scale=alt.Scale(domain=[1, 12]),
-                axis=alt.Axis(
-                    tickMinStep=1,
-                    values=list(range(1, 13)),
-                    labelExpr='{"1":"Jan","2":"Feb","3":"Mar","4":"Apr","5":"May","6":"Jun","7":"Jul","8":"Aug","9":"Sep","10":"Oct","11":"Nov","12":"Dec"}[datum.value]'
-                )
-            ),
+            x=alt.X("month_num:Q", title="Month", scale=alt.Scale(domain=[1, 12]),
+                    axis=alt.Axis(tickMinStep=1, values=list(range(1, 13)),
+                                  labelExpr='{"1":"Jan","2":"Feb","3":"Mar","4":"Apr","5":"May","6":"Jun","7":"Jul","8":"Aug","9":"Sep","10":"Oct","11":"Nov","12":"Dec"}[datum.value]')),
             y=alt.Y("count:Q", title="Books Read"),
             color=alt.Color("year:N", title="Year"),
-            tooltip=[
-                alt.Tooltip("year:N", title="Year"),
-                alt.Tooltip("month:N", title="Month"),
-                alt.Tooltip("count:Q", title="Books Read")
-            ]
+            tooltip=["year:N", "month:N", "count:Q"]
         ).properties(title="Books Read per Month by Year")
 
-# Cumulative Books Read per Year
-        cum_books = (
-            df.groupby(["year", "month", "month_num"], observed=True)
-            .size()
-            .reset_index(name="count")
-            .sort_values(["year", "month_num"])
-        )
-
+        # Cumulative books read
+        cum_books = books_by_month.sort_values(["year", "month_num"])
         cum_books["cumulative"] = cum_books.groupby("year")["count"].cumsum()
 
         chart_cum_books = alt.Chart(cum_books).mark_line(point=True).encode(
-            x=alt.X(
-                "month_num:Q",
-                title="Month",
-                scale=alt.Scale(domain=[1, 12]),
-                axis=alt.Axis(
-                    tickMinStep=1,
-                    values=list(range(1, 13)),
-                    labelExpr='{"1":"Jan","2":"Feb","3":"Mar","4":"Apr","5":"May","6":"Jun","7":"Jul","8":"Aug","9":"Sep","10":"Oct","11":"Nov","12":"Dec"}[datum.value]'
-                )
-            ),
+            x=alt.X("month_num:Q", title="Month", scale=alt.Scale(domain=[1, 12]),
+                    axis=alt.Axis(tickMinStep=1, values=list(range(1, 13)),
+                                  labelExpr='{"1":"Jan","2":"Feb","3":"Mar","4":"Apr","5":"May","6":"Jun","7":"Jul","8":"Aug","9":"Sep","10":"Oct","11":"Nov","12":"Dec"}[datum.value]')),
             y=alt.Y("cumulative:Q", title="Cumulative Books Read"),
             color=alt.Color("year:N", title="Year"),
-            tooltip=[
-                alt.Tooltip("year:N", title="Year"),
-                alt.Tooltip("month:N", title="Month"),
-                alt.Tooltip("cumulative:Q", title="Cumulative Books Read")
-            ]
+            tooltip=["year:N", "month:N", "cumulative:Q"]
         ).properties(title="Cumulative Books Read per Year")
 
-
-
-         # ✍️ Cumulative Word Count (Overlaid per Year, Jan–Dec)
-
+        # Cumulative word count
         df["word_count"] = pd.to_numeric(df["word_count"], errors="coerce")
         df_valid_words = df.dropna(subset=["word_count", "ym"])
-
-        # Fake date: same year for all (e.g. 2000), just shifting month/day
         df_valid_words["fake_date"] = df_valid_words["ym"].apply(lambda x: x.replace(year=2000))
 
         cum_words = (
-            df_valid_words
-              .groupby(["year", "fake_date"])
-              .agg({"word_count": "sum"})
-              .reset_index()
-              .sort_values(["year", "fake_date"])
+            df_valid_words.groupby(["year", "fake_date"])
+            .agg({"word_count": "sum"})
+            .reset_index()
+            .sort_values(["year", "fake_date"])
         )
-
         cum_words["cumulative"] = cum_words.groupby("year")["word_count"].cumsum()
 
         chart_cum_words = alt.Chart(cum_words).mark_line(interpolate="monotone").encode(
-            x=alt.X(
-                "fake_date:T",
-                title="Month",
-                axis=alt.Axis(format="%b")  # just Jan–Dec
-            ),
+            x=alt.X("fake_date:T", title="Month", axis=alt.Axis(format="%b")),
             y=alt.Y("cumulative:Q", title="Cumulative Word Count"),
             color=alt.Color("year:N", title="Year"),
-            tooltip=[
-                alt.Tooltip("year:N", title="Year"),
-                alt.Tooltip("fake_date:T", title="Month", format="%B"),
-                alt.Tooltip("cumulative:Q", title="Cumulative Words")
-            ]
+            tooltip=["year:N", alt.Tooltip("fake_date:T", title="Month", format="%B"), "cumulative:Q"]
         ).properties(title="Cumulative Word Count (Jan–Dec, by Year)")
 
-
-# Fiction vs Non-fiction pie chart
+        # Fiction vs Non-fiction pie chart
         pie_data_f = df["fiction_nonfiction"].value_counts().reset_index()
         pie_data_f.columns = ["fiction_nonfiction", "count"]
-
-        # Base chart
         base_f = alt.Chart(pie_data_f).encode(
             theta=alt.Theta("count:Q", stack=True),
             color=alt.Color("fiction_nonfiction:N", title="Fiction/Non-fiction")
         )
+        pie_chart_f = base_f.mark_arc(innerRadius=30).properties(title="Fiction vs Non-fiction") + \
+                      base_f.mark_text(radius=75, fontSize=25, fontWeight="bold", fill="white").encode(text="count:Q")
 
-        # Arc (donut)
-        pie_chart_f = base_f.mark_arc(innerRadius=30).properties(title="Fiction vs Non-fiction")
-
-        # Centered labels
-        text_f = base_f.mark_text(
-            radius=75,
-            fontSize=25,
-            fontWeight="bold",
-            fill="white"
-        ).encode(
-            text="count:Q"
-        )
-
-        pie_chart_f = pie_chart_f + text_f
-
-
-# Author gender pie chart
+        # Author gender pie chart
         pie_data_g = df["author_gender"].value_counts().reset_index()
         pie_data_g.columns = ["author_gender", "count"]
-
         base_g = alt.Chart(pie_data_g).encode(
             theta=alt.Theta("count:Q", stack=True),
             color=alt.Color("author_gender:N", title="Gender")
         )
+        pie_chart_g = base_g.mark_arc(innerRadius=30).properties(title="Gender Divide") + \
+                      base_g.mark_text(radius=75, fontSize=25, fontWeight="bold", fill="white").encode(text="count:Q")
 
-        pie_chart_g = base_g.mark_arc(innerRadius=30).properties(title="Gender Divide")
-
-        #centered labels
-        text_g = base_g.mark_text(
-            radius=75,
-            fontSize=25,
-            fontWeight="bold",
-            fill="white"
-        ).encode(
-            text="count:Q"
-        )
-        
-        pie_chart_g = pie_chart_g + text_g
-
-        
         # Display charts
         col1, col2 = st.columns(2)
         with col1:
             st.altair_chart(pie_chart_f, use_container_width=True)
-
         with col2:
             st.altair_chart(pie_chart_g, use_container_width=True)
-
 
         st.altair_chart(combined, use_container_width=True)
         st.altair_chart(chart_cum_words, use_container_width=True)
 
-       
-
         col1, col2 = st.columns(2)
         with col1:
             st.altair_chart(chart_books, use_container_width=True)
-           
         with col2:
             st.altair_chart(chart_cum_books, use_container_width=True)
 
