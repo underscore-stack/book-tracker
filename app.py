@@ -198,32 +198,28 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 🏆 Longest and Shortest Books per Year (Styled + Centered HTML Table)
+# 🧠 Longest and Shortest Book per Year
+try:
+    summary = df.dropna(subset=["pages", "year"]).copy()
+    summary["pages"] = pd.to_numeric(summary["pages"], errors="coerce")
+    summary["year"] = pd.to_numeric(summary["year"], errors="coerce")
+    summary = summary.dropna(subset=["pages", "year"])
 
-df_all = pd.DataFrame(books, columns=[
-    "id", "title", "author", "publisher", "pub_year", "pages",
-    "genre", "author_gender", "fiction_nonfiction", "tags",
-    "date_finished", "cover_url", "openlibrary_id", "isbn", "word_count"
-])
+    # Group by year, then find idx of min/max
+    idx_max = summary.groupby("year")["pages"].idxmax()
+    idx_min = summary.groupby("year")["pages"].idxmin()
 
-df_all["pages"] = pd.to_numeric(df_all["pages"], errors="coerce")
-df_all["ym"] = pd.to_datetime(df_all["date_finished"], format="%Y-%m", errors="coerce")
-df_all["year"] = df_all["ym"].dt.year
-df_all = df_all.dropna(subset=["pages", "year"])
+    summary["title_long"] = summary.loc[idx_max]["title"]
+    summary["author_long"] = summary.loc[idx_max]["author"]
+    summary["pages_long"] = summary.loc[idx_max]["pages"]
 
-longest = df_all.loc[df_all.groupby("year")["pages"].idxmax()]
-shortest = df_all.loc[df_all.groupby("year")["pages"].idxmin()]
+    summary["title_short"] = summary.loc[idx_min]["title"]
+    summary["author_short"] = summary.loc[idx_min]["author"]
+    summary["pages_short"] = summary.loc[idx_min]["pages"]
 
-summary = pd.merge(
-    longest[["year", "title", "author", "pages"]],
-    shortest[["year", "title", "author", "pages"]],
-    on="year",
-    suffixes=("_long", "_short")
-)
+    summary = summary.drop_duplicates(subset=["year"])
 
-if not summary.empty and all(col in summary.columns for col in [
-    "title_long", "author_long", "pages_long", "title_short", "author_short", "pages_short"
-]):
+    # Format as text
     summary["Longest Book"] = summary.apply(
         lambda row: f"<strong>{row['title_long']}</strong> by {row['author_long']} ({int(row['pages_long'])} pages)",
         axis=1
@@ -232,9 +228,22 @@ if not summary.empty and all(col in summary.columns for col in [
         lambda row: f"<strong>{row['title_short']}</strong> by {row['author_short']} ({int(row['pages_short'])} pages)",
         axis=1
     )
-else:
-    summary["Longest Book"] = ""
-    summary["Shortest Book"] = ""
+
+    # ✅ Display-only columns
+    summary = summary[["year", "Longest Book", "Shortest Book"]]
+    summary = summary.rename(columns={"year": "Year"})
+
+    # Display with clean style
+    st.markdown("### 📚 Longest and Shortest Book Per Year")
+    st.dataframe(
+        summary.to_html(escape=False, index=False),
+        use_container_width=True,
+        height=(len(summary) + 1) * 35
+    )
+
+except Exception as e:
+    st.warning(f"Could not generate longest/shortest book table: {e}")
+
     
 # Convert to HTML without extra table border
 table_html = summary.to_html(index=False, escape=False)
