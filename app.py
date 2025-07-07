@@ -514,24 +514,27 @@ if filtered_books:
 
 
 for b in filtered_books:
-    book_id = b[0]
-    # Ensure session keys are initialized immediately
+    book_id = b["id"]
+    # Ensure session keys are initialized
     if f"edit_{book_id}" not in st.session_state:
         st.session_state[f"edit_{book_id}"] = False
     if f"expanded_{book_id}" not in st.session_state:
         st.session_state[f"expanded_{book_id}"] = False
-    title, author = b[1], b[2]
-    publisher = b[3]
-    pub_year = b[4]
-    pages = b[5] or 0
-    genre = b[6] or ""
-    gender = b[7] or ""
-    fiction = b[8] or ""
-    tags = b[9] or ""
-    date_str = b[10]
-    cover_url = b[11]
-    openlibrary_id = b[12]
-    isbn = b[13] if len(b) > 13 else ""
+
+    title = b.get("title", "")
+    author = b.get("author", "")
+    publisher = b.get("publisher", "")
+    pub_year = b.get("pub_year", "")
+    pages = b.get("pages", 0) or 0
+    genre = b.get("genre", "")
+    gender = b.get("author_gender", "")
+    fiction = b.get("fiction_nonfiction", "")
+    tags = b.get("tags", "")
+    date_str = b.get("date_finished", "")
+    cover_url = b.get("cover_url", "")
+    openlibrary_id = b.get("openlibrary_id", "")
+    isbn = b.get("isbn", "")
+    word_count = b.get("word_count", "")
 
     try:
         completed_date = datetime.strptime(date_str, "%Y-%m").strftime("%b-%Y")
@@ -540,7 +543,7 @@ for b in filtered_books:
 
     cols = st.columns([1, 9, 1])
     with cols[0]:
-        if cover_url and cover_url.startswith("http"):
+        if cover_url.startswith("http"):
             st.image(cover_url, width=60)
         else:
             st.empty()
@@ -561,23 +564,21 @@ for b in filtered_books:
             st.markdown(f"**Genre:** {genre}")
             st.markdown(f"**Author Gender:** {gender}")
             st.markdown(f"**Pages:** {pages}")
-            st.markdown(f"**Length (est.):** {b[14] if len(b) > 14 and b[14] else '—'} words")
+            st.markdown(f"**Length (est.):** {word_count or '—'} words")
             st.markdown(f"**Publisher:** {publisher}")
             st.markdown(f"**ISBN:** {isbn}")
             st.markdown(f"**OpenLibrary ID:** {openlibrary_id}")
             st.markdown(f"**Tags:** {tags}")
 
         with layout_right:
-            if cover_url and cover_url.startswith("http"):
-                    st.markdown(
-                        f'<div class="expanded-cover"><img src="{cover_url}" style="max-width: 80%; height: auto;"></div>',
-                        unsafe_allow_html=True,
-                    )
+            if cover_url.startswith("http"):
+                st.markdown(
+                    f'<div class="expanded-cover"><img src="{cover_url}" style="max-width: 80%; height: auto;"></div>',
+                    unsafe_allow_html=True,
+                )
             else:
                 st.caption("No cover available")
-                
-        # Show buttons before the form
-        # Show Edit/Delete buttons if not in edit mode
+
         if not st.session_state[f"edit_{book_id}"]:
             col1, col2 = st.columns([1, 1])
             with col1:
@@ -589,14 +590,13 @@ for b in filtered_books:
                     st.session_state.deleted_message = f"Book '{title}' deleted"
                     st.rerun()
 
-        # Show Edit Form
         if st.session_state[f"edit_{book_id}"]:
             with st.form(key=f"edit_form_{book_id}"):
                 new_title = st.text_input("Title", value=title)
                 new_author = st.text_input("Author", value=author)
                 new_publisher = st.text_input("Publisher", value=publisher)
                 new_pub_year = st.text_input("Publication Year", value=str(pub_year or ""))
-                new_pages = st.number_input("Pages", min_value=0, value=pages or 0, step=1)
+                new_pages = st.number_input("Pages", min_value=0, value=pages, step=1)
                 new_genre = st.text_input("Genre", value=genre)
                 new_gender = st.selectbox("Author Gender", ["", "Male", "Female", "Nonbinary", "Multiple", "Unknown"],
                                           index=["", "Male", "Female", "Nonbinary", "Multiple", "Unknown"].index(gender))
@@ -627,4 +627,3 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
-
