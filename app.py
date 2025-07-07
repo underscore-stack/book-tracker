@@ -219,18 +219,21 @@ summary = pd.merge(
     suffixes=("_long", "_short")
 )
 
-summary["Longest Book"] = summary.apply(
-    lambda row: f"<strong>{row['title_long']}</strong> by {row['author_long']} ({int(row['pages_long'])} pages)",
-    axis=1
-)
-summary["Shortest Book"] = summary.apply(
-    lambda row: f"<strong>{row['title_short']}</strong> by {row['author_short']} ({int(row['pages_short'])} pages)",
-    axis=1
-)
-summary = summary[["year", "Longest Book", "Shortest Book"]].sort_values("year")
-summary["year"] = summary["year"].astype(int)
-summary.columns = ["Year", "Longest Book", "Shortest Book"]
-
+if not summary.empty and all(col in summary.columns for col in [
+    "title_long", "author_long", "pages_long", "title_short", "author_short", "pages_short"
+]):
+    summary["Longest Book"] = summary.apply(
+        lambda row: f"<strong>{row['title_long']}</strong> by {row['author_long']} ({int(row['pages_long'])} pages)",
+        axis=1
+    )
+    summary["Shortest Book"] = summary.apply(
+        lambda row: f"<strong>{row['title_short']}</strong> by {row['author_short']} ({int(row['pages_short'])} pages)",
+        axis=1
+    )
+else:
+    summary["Longest Book"] = ""
+    summary["Shortest Book"] = ""
+    
 # Convert to HTML without extra table border
 table_html = summary.to_html(index=False, escape=False)
 
