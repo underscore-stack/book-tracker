@@ -198,12 +198,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
-
-    
-# Convert to HTML without extra table border
-table_html = summary.to_html(index=False, escape=False)
-
 # Apply custom style
 styled_html = f"""
 <style>
