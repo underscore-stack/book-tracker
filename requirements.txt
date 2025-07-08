@@ -3,3 +3,4 @@ pandas
 altair
 requests
 supabase
+openai>=1.0.0
