@@ -3,8 +3,7 @@ import os
 import json
 import re
 
-
-client = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def enrich_book_metadata(title, author, isbn=None):
     prompt = f"""
