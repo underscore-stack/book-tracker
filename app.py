@@ -4,6 +4,7 @@ import altair as alt
 from datetime import datetime
 from db import add_book, get_all_books, update_book_metadata_full, delete_book
 from openlibrary import search_books
+from enrichment import enrich_book_metadata
 
 st.set_page_config(page_title="Book Tracker", layout="wide")
 st.title("📚 Book Tracker")
@@ -25,19 +26,41 @@ if query:
     results = search_books(query)
     for idx, book in enumerate(results):
         with st.expander(f"**{book['title']}** by {book['author']}"):
+            # Show Enrich button
+            if st.button(f"🔍 Enrich", key=f"enrich_{idx}"):
+                enriched = enrich_book_metadata(book["title"], book["author"], book.get("isbn"))
+                if "error" in enriched:
+                    st.error(f"Enrichment failed: {enriched['error']}")
+                else:
+                    st.session_state[f"enriched_{idx}"] = enriched
+
+            # Get enrichment metadata if available
+            meta = st.session_state.get(f"enriched_{idx}", {})
+
+            # Start the form inside the expander
             with st.form(key=f"form_{idx}"):
                 if book.get("cover_url") and book["cover_url"].startswith("http"):
                     st.image(book["cover_url"], width=120)
                 else:
                     st.caption("No cover available")
 
-                st.write(f"**Publisher:** {book['publisher']}")
-                st.write(f"**Year:** {book['pub_year']}")
-                st.write(f"**Pages:** {book['pages']}")
+                # Show metadata
+                st.write(f"**Publisher:** {meta.get('publisher') or book.get('publisher', '')}")
+                st.write(f"**Year:** {meta.get('pub_year') or book.get('pub_year', '')}")
+                st.write(f"**Pages:** {meta.get('pages') or book.get('pages', '')}")
+                st.write(f"**ISBN:** {book['isbn']}")
+                st.write(f"**Genre:** {meta.get('genre', '')}")
+                
+                # Form inputs
+                gender_options = ["", "Male", "Female", "Nonbinary", "Multiple", "Unknown"]
+                author_gender = st.selectbox("Author Gender", gender_options,
+                    index=gender_options.index(meta.get("author_gender", "")) if meta.get("author_gender", "") in gender_options else 0)
 
-                author_gender = st.selectbox("Author Gender", ["", "Male", "Female", "Nonbinary", "Multiple", "Unknown"])
-                fiction = st.selectbox("Fiction or Non-fiction", ["", "Fiction", "Non-fiction"])
-                tags = st.text_input("Tags (comma-separated)")
+                fiction_options = ["", "Fiction", "Non-fiction"]
+                fiction = st.selectbox("Fiction or Non-fiction", fiction_options,
+                    index=fiction_options.index(meta.get("fiction_nonfiction", "")) if meta.get("fiction_nonfiction", "") in fiction_options else 0)
+
+                tags = st.text_input("Tags (comma-separated)", value=", ".join(meta.get("tags", [])))
                 date = st.date_input("Date Finished")
 
                 submitted = st.form_submit_button("Add this book")
@@ -45,10 +68,10 @@ if query:
                     book_data = {
                         "title": book["title"],
                         "author": book["author"],
-                        "publisher": book["publisher"],
-                        "pub_year": book["pub_year"],
-                        "pages": book["pages"],
-                        "genre": "",  # left blank
+                        "publisher": meta.get("publisher") or book["publisher"],
+                        "pub_year": meta.get("pub_year") or book["pub_year"],
+                        "pages": meta.get("pages") or book["pages"],
+                        "genre": meta.get("genre", ""),
                         "author_gender": author_gender,
                         "fiction_nonfiction": fiction,
                         "tags": tags,
@@ -60,6 +83,8 @@ if query:
                     add_book(book_data)
                     st.session_state.edit_message = f"Book '{book['title']}' added!"
                     st.rerun()
+
+
 
 # --- Library Filters + View ---
 st.header("📖 Your Library")
@@ -194,6 +219,23 @@ st.markdown("""
 }
 .edit-delete-row button {
     margin-right: 0.5rem;
+}
+.custom-table {
+    margin-left: auto;
+    margin-right: auto;
+    border-collapse: collapse;
+    width: 75%;
+    text-align: center;
+}
+.custom-table th, .custom-table td {
+    padding: 8px;
+    border: 1px solid #ccc;
+    text-align: center;
+}
+.custom-table th:first-child,
+.custom-table td:first-child {
+    text-align: center;
+    white-space: nowrap;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -331,62 +373,46 @@ if filtered_books:
         with col2:
             st.altair_chart(chart_cum_books, use_container_width=True)
 
-try:
-    summary = df.dropna(subset=["pages", "year"]).copy()
-    summary["pages"] = pd.to_numeric(summary["pages"], errors="coerce")
-    summary["year"] = pd.to_numeric(summary["year"], errors="coerce")
-    summary = summary.dropna(subset=["pages", "year"])
+if not df.empty:
+    try:
+        df_valid = df.dropna(subset=["pages", "year"])
+        df_valid["pages"] = pd.to_numeric(df_valid["pages"], errors="coerce")
+        df_valid["year"] = df_valid["year"].astype(int)
 
-    # Find longest and shortest per year
-    longest = summary.loc[summary.groupby("year")["pages"].idxmax()].copy()
-    shortest = summary.loc[summary.groupby("year")["pages"].idxmin()].copy()
+        def get_extreme_books(df, func):
+            return (
+                df.loc[df.groupby("year")["pages"].transform(func) == df["pages"]]
+                .drop_duplicates("year")
+                .set_index("year")
+            )
 
-    # Format display columns
-    longest["Longest Book"] = longest.apply(
-        lambda row: f"<strong>{row['title']}</strong> by {row['author']} ({int(row['pages'])} pages)"
-        if pd.notnull(row["pages"]) else "—",
-        axis=1
-    )
-    shortest["Shortest Book"] = shortest.apply(
-        lambda row: f"<strong>{row['title']}</strong> by {row['author']} ({int(row['pages'])} pages)"
-        if pd.notnull(row["pages"]) else "—",
-        axis=1
-    )
+        longest = get_extreme_books(df_valid, "max")
+        shortest = get_extreme_books(df_valid, "min")
 
-    # Merge on year
-    summary = pd.merge(
-        longest[["year", "Longest Book"]],
-        shortest[["year", "Shortest Book"]],
-        on="year",
-        how="outer"
-    ).sort_values("year")
+        summary = pd.DataFrame(index=sorted(df_valid["year"].unique()))
+        summary["Longest Book"] = longest.apply(
+            lambda x: f"<b>{x['title']}</b> by {x['author']} ({int(x['pages'])} pages)",
+            axis=1
+        )
+        summary["Shortest Book"] = shortest.apply(
+            lambda x: f"<b>{x['title']}</b> by {x['author']} ({int(x['pages'])} pages)",
+            axis=1
+        )
+        summary.index.name = None
 
-    # Rename for display
-    summary = summary.rename(columns={"year": "Year"})
+        st.markdown("<h4 style='margin-top: 2em;'>📏 Longest and Shortest Books per Year</h4>", unsafe_allow_html=True)
+        st.markdown(
+            summary.to_html(
+                escape=False,
+                index_names=True,
+                classes="custom-table",
+                border=1
+            ),
+            unsafe_allow_html=True
+        )
+    except Exception as e:
+        st.error(f"Could not generate longest/shortest book table: {e}")
 
-    # Render
-    table_html = summary.to_html(index=False, escape=False)
-
-    st.markdown("### 📚 Longest and Shortest Book Per Year")
-    st.markdown(f"""
-        <style>
-            .custom-table td {{
-                padding: 8px 12px;
-                vertical-align: top;
-            }}
-            .custom-table th {{
-                text-align: left;
-                background-color: #f5f5f5;
-                padding: 10px 12px;
-            }}
-        </style>
-        <div class='custom-table'>
-            {table_html}
-        </div>
-    """, unsafe_allow_html=True)
-
-except Exception as e:
-    st.warning(f"Could not generate longest/shortest book table: {e}")
 
 
 
@@ -469,22 +495,41 @@ for b in filtered_books:
 
         if st.session_state[f"edit_{book_id}"]:
             with st.form(key=f"edit_form_{book_id}"):
+                meta = st.session_state.get(f"edit_enriched_{book_id}", {})
+
                 new_title = st.text_input("Title", value=title)
                 new_author = st.text_input("Author", value=author)
-                new_publisher = st.text_input("Publisher", value=publisher)
-                new_pub_year = st.text_input("Publication Year", value=str(pub_year or ""))
-                new_pages = st.number_input("Pages", min_value=0, value=pages, step=1)
-                new_genre = st.text_input("Genre", value=genre)
-                new_gender = st.selectbox("Author Gender", ["", "Male", "Female", "Nonbinary", "Multiple", "Unknown"],
-                                          index=["", "Male", "Female", "Nonbinary", "Multiple", "Unknown"].index(gender))
-                new_fiction = st.selectbox("Fiction or Non-fiction", ["", "Fiction", "Non-fiction"],
-                                           index=["", "Fiction", "Non-fiction"].index(fiction))
-                new_tags = st.text_input("Tags (comma-separated)", value=tags)
+                new_publisher = st.text_input("Publisher", value=meta.get("publisher", publisher))
+                new_pub_year = st.text_input("Publication Year", value=str(meta.get("pub_year", pub_year or "")))
+                new_pages = st.number_input("Pages", min_value=0, value=meta.get("pages", pages or 0), step=1)
+                new_genre = st.text_input("Genre", value=meta.get("genre", genre))
+
+                gender_options = ["", "Male", "Female", "Nonbinary", "Multiple", "Unknown"]
+                gender_index = gender_options.index(meta.get("author_gender", gender)) if meta.get("author_gender", gender) in gender_options else 0
+                new_gender = st.selectbox("Author Gender", gender_options, index=gender_index)
+
+                fiction_options = ["", "Fiction", "Non-fiction"]
+                fiction_index = fiction_options.index(meta.get("fiction_nonfiction", fiction)) if meta.get("fiction_nonfiction", fiction) in fiction_options else 0
+                new_fiction = st.selectbox("Fiction or Non-fiction", fiction_options, index=fiction_index)
+
+                new_tags = st.text_input("Tags (comma-separated)", value=", ".join(meta.get("tags", tags.split(",") if tags else [])))
+
                 new_date = st.date_input("Date Finished", value=datetime.strptime(date_str, "%Y-%m"))
                 new_isbn = st.text_input("ISBN", value=isbn)
                 new_olid = st.text_input("OpenLibrary ID", value=openlibrary_id)
 
-                submitted = st.form_submit_button("Update Book")
+                # Submit buttons
+                submitted = st.form_submit_button("💾 Update Book")
+                enrich_clicked = st.form_submit_button("🔍 Enrich Metadata")
+
+                if enrich_clicked:
+                    enriched = enrich_book_metadata(title, author, isbn)
+                    if "error" in enriched:
+                        st.warning(f"Enrichment failed: {enriched['error']}")
+                    else:
+                        st.session_state[f"edit_enriched_{book_id}"] = enriched
+                        st.rerun()
+
                 if submitted:
                     update_book_metadata_full(
                         book_id,
@@ -504,3 +549,4 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
