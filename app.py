@@ -66,18 +66,18 @@ if query:
                 submitted = st.form_submit_button("Add this book")
                 if submitted:
                     book_data = {
-                        "title": book["title"],
-                        "author": book["author"],
-                        "publisher": meta.get("publisher") or book["publisher"],
-                        "pub_year": meta.get("pub_year") or book["pub_year"],
-                        "pages": meta.get("pages") or book["pages"],
-                        "genre": meta.get("genre", ""),
+                        "title": book.get("title", ""),
+                        "author": book.get("author", ""),
+                        "publisher": meta.get("publisher") or book.get("publisher", ""),
+                        "pub_year": book.get("pub_year"),
+                        "pages": book.get("pages"),
+                        "genre": "",
                         "author_gender": author_gender,
                         "fiction_nonfiction": fiction,
                         "tags": tags,
                         "date_finished": date.strftime("%Y-%m"),
-                        "cover_url": book["cover_url"],
-                        "openlibrary_id": book["openlibrary_id"],
+                        "cover_url": book.get("cover_url", ""),
+                        "openlibrary_id": book.get("openlibrary_id", ""),
                         "isbn": book.get("isbn", "")
                     }
                     add_book(book_data)
