@@ -226,6 +226,7 @@ st.markdown("""
     border-collapse: collapse;
     width: 75%;
     text-align: center;
+    margin-bottom: 75px !important;
 }
 .custom-table th, .custom-table td {
     padding: 8px;
