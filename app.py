@@ -250,13 +250,7 @@ if filtered_books:
         "genre", "author_gender", "fiction_nonfiction", "tags",
         "date_finished", "cover_url", "openlibrary_id", "isbn", "word_count"
     ]]
-else:
-    st.info("No filtered books to display.")
-    df = pd.DataFrame(columns=[
-        "id", "title", "author", "publisher", "pub_year", "pages",
-        "genre", "author_gender", "fiction_nonfiction", "tags",
-        "date_finished", "cover_url", "openlibrary_id", "isbn", "word_count"
-    ])
+
     df["ym"] = pd.to_datetime(df["date_finished"], format="%Y-%m", errors="coerce")
     df["pages"] = pd.to_numeric(df["pages"], errors="coerce")
     df = df.dropna(subset=["ym", "pages"])
@@ -374,6 +368,14 @@ else:
         st.altair_chart(combined, use_container_width=True)
         st.altair_chart(chart_cum_words, use_container_width=True)
 
+else:
+    st.info("No filtered books to display.")
+    df = pd.DataFrame(columns=[
+        "id", "title", "author", "publisher", "pub_year", "pages",
+        "genre", "author_gender", "fiction_nonfiction", "tags",
+        "date_finished", "cover_url", "openlibrary_id", "isbn", "word_count"
+    ])
+    
         col1, col2 = st.columns(2)
         with col1:
             st.altair_chart(chart_books, use_container_width=True)
