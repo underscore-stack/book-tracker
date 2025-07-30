@@ -21,3 +21,26 @@ def search_books(query):
         })
 
     return books
+    
+def fetch_detailed_metadata(olid=None, isbn=None):
+    if isbn:
+        url = f"https://openlibrary.org/api/books?bibkeys=ISBN:{isbn}&format=json&jscmd=data"
+        key = f"ISBN:{isbn}"
+    elif olid:
+        url = f"https://openlibrary.org/api/books?bibkeys=OLID:{olid}&format=json&jscmd=data"
+        key = f"OLID:{olid}"
+    else:
+        return {}
+
+    r = requests.get(url)
+    if r.status_code != 200:
+        return {}
+
+    data = r.json().get(key, {})
+    return {
+        "publisher": data.get("publishers", [{}])[0].get("name", ""),
+        "pages": data.get("number_of_pages"),
+        "isbn": isbn,
+        "subjects": [s["name"] for s in data.get("subjects", [])],
+    }
+
