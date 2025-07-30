@@ -376,11 +376,11 @@ else:
         "date_finished", "cover_url", "openlibrary_id", "isbn", "word_count"
     ])
     
-        col1, col2 = st.columns(2)
-        with col1:
-            st.altair_chart(chart_books, use_container_width=True)
-        with col2:
-            st.altair_chart(chart_cum_books, use_container_width=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.altair_chart(chart_books, use_container_width=True)
+    with col2:
+        st.altair_chart(chart_cum_books, use_container_width=True)
 
 if not df.empty:
     try:
