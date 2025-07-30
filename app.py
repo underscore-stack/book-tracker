@@ -382,8 +382,13 @@ else:
 
 if not df.empty:
     try:
+        # Ensure 'year' and 'pages' are numeric
+        if "year" not in df.columns:
+            df["ym"] = pd.to_datetime(df["date_finished"], format="%Y-%m", errors="coerce")
+            df["year"] = df["ym"].dt.year
+
+        df["pages"] = pd.to_numeric(df["pages"], errors="coerce")
         df_valid = df.dropna(subset=["pages", "year"])
-        df_valid["pages"] = pd.to_numeric(df_valid["pages"], errors="coerce")
         df_valid["year"] = df_valid["year"].astype(int)
 
         def get_extreme_books(df, func):
@@ -419,6 +424,7 @@ if not df.empty:
         )
     except Exception as e:
         st.error(f"Could not generate longest/shortest book table: {e}")
+
 
 
 
