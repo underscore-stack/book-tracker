@@ -1,4 +1,6 @@
 import requests
+import re
+
 
 def search_books(query):
     url = f"https://openlibrary.org/search.json?q={query}&limit=10"
@@ -22,17 +24,16 @@ def search_books(query):
 
     return books
     
+import requests
+import re
+
 def get_editions_for_work(olid, language="eng"):
-    url = f"https://openlibrary.org/works/{olid}/editions.json?limit=50"
+    url = f"https://openlibrary.org/works/{olid}/editions.json?limit=100"
     response = requests.get(url)
     if response.status_code != 200:
         return []
 
-    results = response.json().get("entries", [])
-    filtered = [
-        e for e in results
-        if language in e.get("languages", [{}])[0].get("key", "")
-    ]
+    entries = response.json().get("entries", [])
 
     def extract_year(date_str):
         try:
@@ -40,20 +41,46 @@ def get_editions_for_work(olid, language="eng"):
         except:
             return None
 
+    seen_isbns = set()
     editions = []
-    for e in filtered:
+
+    for e in entries:
+        # Filter by language
+        langs = e.get("languages", [])
+        if not any(language in l.get("key", "") for l in langs):
+            continue
+
+        # Must have ISBN
+        isbn = (e.get("isbn_10") or e.get("isbn_13") or [])
+        if not isbn:
+            continue
+        primary_isbn = isbn[0]
+        if primary_isbn in seen_isbns:
+            continue
+        seen_isbns.add(primary_isbn)
+
+        # Omit audiobooks
+        format_str = str(e.get("physical_format", "")).lower()
+        if "audio" in format_str or "cd" in format_str:
+            continue
+
         editions.append({
             "title": e.get("title", ""),
-            "publisher": e.get("publishers", [""])[0],
+            "publisher": e.get("publishers", [""])[0] if e.get("publishers") else "",
             "publish_date": e.get("publish_date", ""),
             "publish_year": extract_year(e.get("publish_date", "")),
-            "cover_url": f"http://covers.openlibrary.org/b/id/{e['covers'][0]}-M.jpg"
-                         if e.get("covers") else "",
-            "isbn": e.get("isbn_10", [""])[0] if e.get("isbn_10") else e.get("isbn_13", [""])[0] if e.get("isbn_13") else "",
+            "pages": e.get("number_of_pages"),
+            "cover_url": (
+                f"http://covers.openlibrary.org/b/id/{e['covers'][0]}-M.jpg"
+                if e.get("covers") and isinstance(e["covers"], list) and e["covers"]
+                else ""
+            ),
+            "isbn": primary_isbn,
             "openlibrary_id": e.get("key", "").replace("/books/", "")
         })
 
     return sorted(editions, key=lambda x: x["publish_year"] if isinstance(x["publish_year"], int) else 9999)
+
     
 def fetch_detailed_metadata(olid=None, isbn=None):
     if isbn:
