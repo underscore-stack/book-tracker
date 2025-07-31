@@ -6,31 +6,34 @@ from openlibrary import fetch_detailed_metadata
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def enrich_book_metadata(title, author, isbn=None):
-    # 1. Try OpenLibrary enrichment first
+def enrich_book_metadata(title, author, isbn=None, existing=None):
+    existing = existing or {}
+    enriched = {}
+
+    # 1. Try OpenLibrary
     try:
         if isbn:
             ol_data = fetch_detailed_metadata(isbn=isbn)
-            if ol_data:
-                # If OpenLibrary has decent metadata, use it
-                if any(ol_data.get(k) for k in ["publisher", "pages", "genre", "subjects"]):
-                    enriched = {
-                        "publisher": ol_data.get("publisher", ""),
-                        "pub_year": None,  # Not available from OL API by default
-                        "pages": ol_data.get("pages"),
-                        "genre": ol_data.get("genre", ""),
-                        "fiction_nonfiction": (
-                            "Fiction" if "fiction" in ",".join(ol_data.get("subjects", [])).lower() else "Non-fiction"
-                        ) if ol_data.get("subjects") else "",
-                        "author_gender": "",
-                        "tags": ol_data.get("subjects", [])[:5]
-                    }
-                    return enriched
+            if ol_data and any(ol_data.get(k) for k in ["publisher", "pages", "subjects"]):
+                enriched = {
+                    "publisher": ol_data.get("publisher", ""),
+                    "pub_year": None,  # Not available from OL endpoint
+                    "pages": ol_data.get("pages"),
+                    "genre": ol_data.get("genre", ""),
+                    "fiction_nonfiction": (
+                        "Fiction" if "fiction" in ",".join(ol_data.get("subjects", [])).lower() else "Non-fiction"
+                    ) if ol_data.get("subjects") else "",
+                    "author_gender": "",
+                    "tags": ol_data.get("subjects", [])[:5],
+                    "isbn": isbn,
+                    "cover_url": ol_data.get("cover_url", "")
+                }
     except Exception as e:
         print(f"⚠️ OpenLibrary enrichment failed: {e}")
 
-    # 2. Fallback to GPT if OpenLibrary doesn’t help
-    prompt = f"""
+    # 2. If still missing core fields, fall back to GPT
+    if not enriched.get("publisher") or not enriched.get("pages"):
+        prompt = f"""
 Please return metadata for the book:
 - Title: {title}
 - Author: {author}
@@ -47,25 +50,40 @@ Respond with this JSON:
   "tags": []
 }}
 """
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a helpful book metadata enrichment assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.4
-        )
-        text = response.choices[0].message.content.strip()
-        print("🔍 GPT RAW RESPONSE:\n", text)
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "You are a helpful book metadata enrichment assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.4
+            )
+            text = response.choices[0].message.content.strip()
+            print("🔍 GPT RAW RESPONSE:\n", text)
 
-        # Strip code fences
-        if text.startswith("```"):
-            text = re.sub(r"^```(?:json)?", "", text.strip(), flags=re.IGNORECASE)
-            text = re.sub(r"```$", "", text.strip())
+            if text.startswith("```"):
+                text = re.sub(r"^```(?:json)?", "", text.strip(), flags=re.IGNORECASE)
+                text = re.sub(r"```$", "", text.strip())
 
-        return json.loads(text)
-    except json.JSONDecodeError as e:
-        return {"error": f"Failed to parse GPT response: {e}\nRaw: {text}"}
-    except Exception as e:
-        return {"error": str(e)}
+            gpt_data = json.loads(text)
+            enriched = {**enriched, **gpt_data}
+        except json.JSONDecodeError as e:
+            return {"error": f"Failed to parse GPT response: {e}\nRaw: {text}"}
+        except Exception as e:
+            return {"error": str(e)}
+
+    # 3. Merge with existing (preserve non-empty fields)
+    final = {
+        "publisher": existing.get("publisher") or enriched.get("publisher", ""),
+        "pub_year": existing.get("pub_year") or enriched.get("pub_year"),
+        "pages": existing.get("pages") or enriched.get("pages"),
+        "genre": existing.get("genre") or enriched.get("genre", ""),
+        "fiction_nonfiction": existing.get("fiction_nonfiction") or enriched.get("fiction_nonfiction", ""),
+        "author_gender": existing.get("author_gender") or enriched.get("author_gender", ""),
+        "tags": existing.get("tags") or enriched.get("tags", []),
+        "isbn": existing.get("isbn") or enriched.get("isbn", ""),
+        "cover_url": existing.get("cover_url") or enriched.get("cover_url", "")
+    }
+
+    return final
