@@ -45,13 +45,24 @@ if query:
                                 st.markdown(f"**ISBN:** {ed['isbn']}")
                                 if st.button("➕ Use This Edition", key=f"use_{idx}_{ed['openlibrary_id']}"):
                                     st.session_state[f"enriched_{idx}"] = {
-                                        "publisher": ed["publisher"],
-                                        "pages": None,
-                                        "pub_year": ed["publish_year"],
-                                        "cover_url": ed["cover_url"],
-                                        "isbn": ed["isbn"]
+                                        "publisher": ed.get("publisher", ""),
+                                        "pub_year": ed.get("publish_year"),
+                                        "pages": ed.get("pages"),
+                                        "genre": "",
+                                        "author_gender": "",
+                                        "fiction_nonfiction": "",
+                                        "tags": [],
+                                        "isbn": ed.get("isbn", ""),
+                                        "cover_url": ed.get("cover_url", "")
                                     }
-                                    st.success("✔️ Edition selected. You can now add it via the form below.")
+                                    # Also override displayed book info
+                                    book["isbn"] = ed.get("isbn", "")
+                                    book["cover_url"] = ed.get("cover_url", "")
+                                    book["publisher"] = ed.get("publisher", "")
+                                    book["pub_year"] = ed.get("publish_year")
+                                    book["pages"] = ed.get("pages")
+                                    st.success("✔️ Edition selected. You can now use the form below.")
+
                 else:
                     st.warning("No English editions found.")
 
