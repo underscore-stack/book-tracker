@@ -3,7 +3,7 @@ import pandas as pd
 import altair as alt
 from datetime import datetime
 from db import add_book, get_all_books, update_book_metadata_full, delete_book
-from openlibrary import search_books
+from openlibrary import search_books, get_editions_for_work
 from enrichment import enrich_book_metadata
 
 st.set_page_config(page_title="Book Tracker", layout="wide")
