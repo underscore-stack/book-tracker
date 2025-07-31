@@ -26,6 +26,35 @@ if query:
     results = search_books(query)
     for idx, book in enumerate(results):
         with st.expander(f"**{book['title']}** by {book['author']}"):
+    if st.button("📚 View Editions", key=f"editions_{idx}"):
+        st.session_state[f"selected_work_{idx}"] = book["openlibrary_id"]
+
+    selected_work = st.session_state.get(f"selected_work_{idx}")
+    if selected_work == book["openlibrary_id"]:
+        editions = get_editions_for_work(book["openlibrary_id"])
+        if editions:
+            for ed in editions:
+                with st.container():
+                    cols = st.columns([1, 4])
+                    with cols[0]:
+                        if ed["cover_url"]:
+                            st.image(ed["cover_url"], width=80)
+                    with cols[1]:
+                        st.markdown(f"**Publisher:** {ed['publisher']}")
+                        st.markdown(f"**Published:** {ed['publish_date']}")
+                        st.markdown(f"**ISBN:** {ed['isbn']}")
+                        if st.button("➕ Use This Edition", key=f"use_{ed['isbn']}"):
+                            st.session_state[f"enriched_{idx}"] = {
+                                "publisher": ed["publisher"],
+                                "pages": None,
+                                "pub_year": ed["publish_year"],
+                                "cover_url": ed["cover_url"],
+                                "isbn": ed["isbn"]
+                            }
+                            st.success("✔️ Edition selected. You can now add it via the form below.")
+        else:
+            st.warning("No English editions found.")
+
             # Show Enrich button
             if st.button(f"🔍 Enrich", key=f"enrich_{idx}"):
                 enriched = enrich_book_metadata(book["title"], book["author"], book.get("isbn"))
