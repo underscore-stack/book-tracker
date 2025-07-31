@@ -3,8 +3,6 @@ import os
 import json
 import re
 from openlibrary import fetch_detailed_metadata
-from enrichment import enrich_book_metadata
-
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
