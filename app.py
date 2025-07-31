@@ -43,7 +43,7 @@ if query:
                                 st.markdown(f"**Publisher:** {ed['publisher']}")
                                 st.markdown(f"**Published:** {ed['publish_date']}")
                                 st.markdown(f"**ISBN:** {ed['isbn']}")
-                                if st.button("➕ Use This Edition", key=f"use_{ed['isbn']}"):
+                                if st.button("➕ Use This Edition", key=f"use_{idx}_{ed['openlibrary_id']}"):
                                     st.session_state[f"enriched_{idx}"] = {
                                         "publisher": ed["publisher"],
                                         "pages": None,
