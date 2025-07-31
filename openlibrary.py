@@ -53,7 +53,7 @@ def get_editions_for_work(olid, language="eng"):
             "openlibrary_id": e.get("key", "").replace("/books/", "")
         })
 
-    return sorted(editions, key=lambda x: x["publish_year"] or 9999)
+    return sorted(editions, key=lambda x: x["publish_year"] if isinstance(x["publish_year"], int) else 9999)
     
 def fetch_detailed_metadata(olid=None, isbn=None):
     if isbn:
