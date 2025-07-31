@@ -68,7 +68,18 @@ if query:
 
             # Show Enrich button
             if st.button(f"🔍 Enrich", key=f"enrich_{idx}"):
-                enriched = enrich_book_metadata(book["title"], book["author"], book.get("isbn"))
+                existing = {
+                    "publisher": book.get("publisher"),
+                    "pub_year": book.get("pub_year"),
+                    "pages": book.get("pages"),
+                    "isbn": book.get("isbn"),
+                    "author_gender": "",  # if available
+                    "fiction_nonfiction": "",  # if available
+                    "tags": [],
+                    "cover_url": book.get("cover_url")
+                }
+                enriched = enrich_book_metadata(book["title"], book["author"], book.get("isbn"), existing=existing)
+
                 if "error" in enriched:
                     st.error(f"Enrichment failed: {enriched['error']}")
                 else:
@@ -578,7 +589,19 @@ for b in filtered_books:
                 enrich_clicked = st.form_submit_button("🔍 Enrich Metadata")
 
                 if enrich_clicked:
-                    enriched = enrich_book_metadata(title, author, isbn)
+                    existing = {
+                        "publisher": current_publisher,
+                        "pub_year": current_pub_year,
+                        "pages": current_pages,
+                        "genre": current_genre,
+                        "fiction_nonfiction": current_fiction,
+                        "author_gender": current_gender,
+                        "tags": current_tags,
+                        "isbn": current_isbn,
+                        "cover_url": current_cover
+                    }
+                    enriched = enrich_book_metadata(title, author, isbn, existing=existing)
+
                     if "error" in enriched:
                         st.warning(f"Enrichment failed: {enriched['error']}")
                     else:
