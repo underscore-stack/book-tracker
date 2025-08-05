@@ -129,7 +129,7 @@ if query:
                         "date_finished": date.strftime("%Y-%m"),
                         "cover_url": book.get("cover_url", ""),
                         "openlibrary_id": book.get("openlibrary_id", ""),
-                        "isbn": book.get("isbn", "")
+                        "isbn": meta.get("isbn") or book.get("isbn", "")
                     }
                     add_book(book_data)
                     st.session_state.edit_message = f"Book '{book['title']}' added!"
@@ -627,4 +627,5 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
