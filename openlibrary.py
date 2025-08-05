@@ -40,9 +40,6 @@ def search_books(query):
         })
 
     return books
-    
-import requests
-import re
 
 def get_editions_for_work(olid, language="eng"):
     url = f"https://openlibrary.org/works/{olid}/editions.json?limit=100"
@@ -120,6 +117,7 @@ def fetch_detailed_metadata(olid=None, isbn=None):
         "isbn": isbn,
         "subjects": [s["name"] for s in data.get("subjects", [])],
     }
+
 
 
 
