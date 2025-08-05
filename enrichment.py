@@ -25,7 +25,6 @@ def enrich_book_metadata(title, author, isbn=None, existing=None):
                     ) if ol_data.get("subjects") else "",
                     "author_gender": "",
                     "tags": ol_data.get("subjects", [])[:5],
-                    "isbn": isbn,
                     "cover_url": ol_data.get("cover_url", "")
                 }
     except Exception as e:
@@ -40,7 +39,6 @@ Please return metadata for the book:
 
 Respond with this JSON:
 {{
-  "isbn": "",
   "publisher": "",
   "pub_year": null,
   "pages": null,
@@ -82,10 +80,11 @@ Respond with this JSON:
         "fiction_nonfiction": existing.get("fiction_nonfiction") or enriched.get("fiction_nonfiction", ""),
         "author_gender": existing.get("author_gender") or enriched.get("author_gender", ""),
         "tags": existing.get("tags") or enriched.get("tags", []),
-        "isbn": existing.get("isbn") or enriched.get("isbn", ""),
+        "isbn": existing.get("isbn"),
         "cover_url": existing.get("cover_url") or enriched.get("cover_url", "")
     }
 
     return final
+
 
 
