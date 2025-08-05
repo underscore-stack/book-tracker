@@ -53,7 +53,7 @@ if query:
                                         "author_gender": "",
                                         "fiction_nonfiction": "",
                                         "tags": [],
-                                        book["isbn"] = ed.get("isbn", ""),
+                                        book["isbn"] = ed.get("isbn", "")
                                         st.session_state[f"isbn_{idx}"] = ed.get("isbn", "")
                                     }
                                 
@@ -633,6 +633,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
