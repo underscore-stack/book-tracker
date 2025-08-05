@@ -37,7 +37,6 @@ def enrich_book_metadata(title, author, isbn=None, existing=None):
 Please return metadata for the book:
 - Title: {title}
 - Author: {author}
-- ISBN: {isbn or 'N/A'}
 
 Respond with this JSON:
 {{
@@ -88,4 +87,5 @@ Respond with this JSON:
     }
 
     return final
+
 
