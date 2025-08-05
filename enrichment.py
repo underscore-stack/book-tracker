@@ -71,7 +71,7 @@ Respond with this JSON:
         except Exception as e:
             return {"error": str(e)}
 
-    # 3. Merge with existing (preserve non-empty fields)
+    # 3. Merge with existing (preserve non-empty fields; exclude ISBN!)
     final = {
         "publisher": existing.get("publisher") or enriched.get("publisher", ""),
         "pub_year": existing.get("pub_year") or enriched.get("pub_year"),
@@ -80,11 +80,8 @@ Respond with this JSON:
         "fiction_nonfiction": existing.get("fiction_nonfiction") or enriched.get("fiction_nonfiction", ""),
         "author_gender": existing.get("author_gender") or enriched.get("author_gender", ""),
         "tags": existing.get("tags") or enriched.get("tags", []),
-        "isbn": existing.get("isbn"),
+        "isbn": existing.get("isbn", ""),  # ✅ never overwrite
         "cover_url": existing.get("cover_url") or enriched.get("cover_url", "")
     }
 
     return final
-
-
-
