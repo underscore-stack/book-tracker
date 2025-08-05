@@ -56,7 +56,6 @@ if query:
                                         "cover_url": ed.get("cover_url", "")
                                     }
                                     # Also override displayed book info
-                                    book["isbn"] = ed.get("isbn", "")
                                     book["cover_url"] = ed.get("cover_url", "")
                                     book["publisher"] = ed.get("publisher", "")
                                     book["pub_year"] = ed.get("publish_year")
@@ -627,6 +626,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
