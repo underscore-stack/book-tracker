@@ -60,6 +60,7 @@ if query:
                                     book["publisher"] = ed.get("publisher", "")
                                     book["pub_year"] = ed.get("publish_year")
                                     book["pages"] = ed.get("pages")
+                                    book["isbn"] = ed.get("isbn", "")
                                     st.success("✔️ Edition selected. You can now use the form below.")
 
                 else:
@@ -626,6 +627,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
