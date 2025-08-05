@@ -104,7 +104,7 @@ if query:
                 st.write(f"**Publisher:** {meta.get('publisher') or book.get('publisher', '')}")
                 st.write(f"**Year:** {meta.get('pub_year') or book.get('pub_year', '')}")
                 st.write(f"**Pages:** {meta.get('pages') or book.get('pages', '')}")
-                st.write(f"**ISBN:** {book['isbn']}")
+                st.write(f"**ISBN:** {st.session_state.get(f'isbn_{idx}', book.get('isbn', ''))}")
                 st.write(f"**Genre:** {meta.get('genre', '')}")
                 
                 # Form inputs
@@ -636,6 +636,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
