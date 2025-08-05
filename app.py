@@ -52,12 +52,11 @@ if query:
                                         "genre": "",
                                         "author_gender": "",
                                         "fiction_nonfiction": "",
-                                        "tags": [],
-                                        book["isbn"] = ed.get("isbn", "")
-                                        st.session_state[f"isbn_{idx}"] = ed.get("isbn", "")
+                                        "tags": []
                                     }
                                 
                                     # Persist non-editable fields separately
+                                    book["isbn"] = ed.get("isbn", "")
                                     st.session_state[f"isbn_{idx}"] = ed.get("isbn", "")
                                     st.session_state[f"cover_{idx}"] = ed.get("cover_url", "")
 
@@ -633,6 +632,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
