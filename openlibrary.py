@@ -1,6 +1,23 @@
 import requests
 import re
 
+def extract_page_count(ed):
+    # Try number_of_pages first
+    if ed.get("number_of_pages"):
+        try:
+            return int(ed["number_of_pages"])
+        except:
+            pass
+
+    # Fallback to parsing pagination
+    pagination = ed.get("pagination")
+    if pagination:
+        match = re.search(r"\d{2,4}", pagination)
+        if match:
+            return int(match.group())
+    
+    return None
+
 
 def search_books(query):
     url = f"https://openlibrary.org/search.json?q={query}&limit=10"
@@ -69,7 +86,7 @@ def get_editions_for_work(olid, language="eng"):
             "publisher": e.get("publishers", [""])[0] if e.get("publishers") else "",
             "publish_date": e.get("publish_date", ""),
             "publish_year": extract_year(e.get("publish_date", "")),
-            "pages": e.get("number_of_pages"),
+            "pages": extract_page_count(ed),
             "cover_url": (
                 f"http://covers.openlibrary.org/b/id/{e['covers'][0]}-M.jpg"
                 if e.get("covers") and isinstance(e["covers"], list) and e["covers"]
@@ -103,4 +120,5 @@ def fetch_detailed_metadata(olid=None, isbn=None):
         "isbn": isbn,
         "subjects": [s["name"] for s in data.get("subjects", [])],
     }
+
 
