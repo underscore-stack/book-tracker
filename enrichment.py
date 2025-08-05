@@ -41,6 +41,7 @@ Please return metadata for the book:
 
 Respond with this JSON:
 {{
+  "isbn": "",
   "publisher": "",
   "pub_year": null,
   "pages": null,
@@ -87,3 +88,4 @@ Respond with this JSON:
     }
 
     return final
+
