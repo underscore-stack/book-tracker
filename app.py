@@ -120,6 +120,10 @@ if query:
                 date = st.date_input("Date Finished")
 
                 submitted = st.form_submit_button("Add this book")
+                # 🐛 DEBUGGING ISBN LOSS
+                st.write("📦 DEBUG - book['isbn']:", book.get("isbn"))
+                st.write("📦 DEBUG - session_state isbn:", st.session_state.get(f"isbn_{idx}"))
+
                 if submitted:
                     book_data = {
                         "title": book.get("title", ""),
@@ -632,6 +636,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
