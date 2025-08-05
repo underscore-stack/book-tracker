@@ -76,7 +76,7 @@ if query:
                     "publisher": book.get("publisher"),
                     "pub_year": book.get("pub_year"),
                     "pages": book.get("pages"),
-                    "isbn": book.get("isbn"),
+                    "isbn": st.session_state.get(f"isbn_{idx}", book.get("isbn", "")),
                     "author_gender": "",  # if available
                     "fiction_nonfiction": "",  # if available
                     "tags": [],
@@ -631,6 +631,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
