@@ -44,6 +44,7 @@ if query:
                                 st.markdown(f"**Published:** {ed['publish_date']}")
                                 st.markdown(f"**ISBN:** {ed['isbn']}")
                                 if st.button("➕ Use This Edition", key=f"use_{idx}_{ed['openlibrary_id']}"):
+                                    # Save editable fields to enriched
                                     st.session_state[f"enriched_{idx}"] = {
                                         "publisher": ed.get("publisher", ""),
                                         "pub_year": ed.get("publish_year"),
@@ -51,10 +52,13 @@ if query:
                                         "genre": "",
                                         "author_gender": "",
                                         "fiction_nonfiction": "",
-                                        "tags": [],
-                                        "isbn": ed.get("isbn", ""),
-                                        "cover_url": ed.get("cover_url", "")
+                                        "tags": []
                                     }
+                                
+                                    # Persist non-editable fields separately
+                                    st.session_state[f"isbn_{idx}"] = ed.get("isbn", "")
+                                    st.session_state[f"cover_{idx}"] = ed.get("cover_url", "")
+
                                     # Also override displayed book info
                                     book["cover_url"] = ed.get("cover_url", "")
                                     book["publisher"] = ed.get("publisher", "")
@@ -129,7 +133,7 @@ if query:
                         "date_finished": date.strftime("%Y-%m"),
                         "cover_url": book.get("cover_url", ""),
                         "openlibrary_id": book.get("openlibrary_id", ""),
-                        "isbn": book.get("isbn", "")
+                        "isbn": st.session_state.get(f"isbn_{idx}", "")
                     }
                     add_book(book_data)
                     st.session_state.edit_message = f"Book '{book['title']}' added!"
@@ -627,6 +631,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
