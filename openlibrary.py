@@ -86,7 +86,7 @@ def get_editions_for_work(olid, language="eng"):
             "publisher": e.get("publishers", [""])[0] if e.get("publishers") else "",
             "publish_date": e.get("publish_date", ""),
             "publish_year": extract_year(e.get("publish_date", "")),
-            "pages": extract_page_count(ed),
+            "pages": extract_page_count(e),
             "cover_url": (
                 f"http://covers.openlibrary.org/b/id/{e['covers'][0]}-M.jpg"
                 if e.get("covers") and isinstance(e["covers"], list) and e["covers"]
@@ -120,5 +120,6 @@ def fetch_detailed_metadata(olid=None, isbn=None):
         "isbn": isbn,
         "subjects": [s["name"] for s in data.get("subjects", [])],
     }
+
 
 
