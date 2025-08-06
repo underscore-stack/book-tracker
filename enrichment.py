@@ -3,6 +3,8 @@ import os
 import json
 import re
 from openlibrary import fetch_detailed_metadata
+import streamlit as st
+
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -84,10 +86,14 @@ Respond with this JSON:
         "cover_url": enriched.get("cover_url") if not existing.get("cover_url") else existing["cover_url"]
     }
 
-    print(f"EXISTING pages: {existing.get('pages')}, ENRICHED pages: {enriched.get('pages')}, FINAL pages: {final['pages']}")
-
+    st.write("🔍 DEBUG - Pages Handling", {
+        "EXISTING": existing.get("pages"),
+        "ENRICHED": enriched.get("pages"),
+        "FINAL": final["pages"]
+    })
 
     return final
+
 
 
 
