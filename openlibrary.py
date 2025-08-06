@@ -1,21 +1,26 @@
 import requests
 import re
 
+import re
+
 def extract_page_count(ed):
     # Try number_of_pages first
     if ed.get("number_of_pages"):
         try:
             return int(ed["number_of_pages"])
-        except:
+        except Exception:
             pass
 
-    # Fallback to parsing pagination
+    # Try parsing pagination string like "224", "xv, 367 p.", etc.
     pagination = ed.get("pagination")
     if pagination:
-        match = re.search(r"\d{2,4}", pagination)
+        match = re.search(r"\b\d{2,4}\b", pagination)
         if match:
-            return int(match.group())
-    
+            try:
+                return int(match.group())
+            except Exception:
+                pass
+
     return None
 
 
@@ -117,6 +122,7 @@ def fetch_detailed_metadata(olid=None, isbn=None):
         "isbn": isbn,
         "subjects": [s["name"] for s in data.get("subjects", [])],
     }
+
 
 
 
