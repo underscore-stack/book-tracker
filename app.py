@@ -45,6 +45,8 @@ if query:
                                 st.markdown(f"**ISBN:** {ed['isbn']}")
                                 if st.button("➕ Use This Edition", key=f"use_{idx}_{ed['openlibrary_id']}"):
                                     # Save editable fields to enriched
+                                    st.write("📘 Edition selected has pages:", ed.get("pages"))
+
                                     st.session_state[f"enriched_{idx}"] = {
                                         "publisher": ed.get("publisher", ""),
                                         "pub_year": ed.get("publish_year"),
@@ -635,6 +637,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
