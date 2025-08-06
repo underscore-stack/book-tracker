@@ -399,11 +399,12 @@ if filtered_books:
                 axis=alt.Axis(
                     labelExpr='{"1":"Jan","2":"Feb","3":"Mar","4":"Apr","5":"May","6":"Jun","7":"Jul","8":"Aug","9":"Sep","10":"Oct","11":"Nov","12":"Dec"}[datum.value]'
                 )
-            )
+            ),
             y=alt.Y("cumulative:Q", title="Cumulative Word Count"),
             color=alt.Color("year:N", title="Year"),
-            tooltip=["year:N", alt.Tooltip("fake_date:T", title="Month", format="%B"), "cumulative:Q"]
+            tooltip=["year:N", alt.Tooltip("fake_date:T", title="Date", format="%B"), "cumulative:Q"]
         ).properties(title="Cumulative Word Count (Jan–Dec, by Year)")
+
 
         # Fiction vs Non-fiction pie chart
         pie_data_f = df["fiction_nonfiction"].value_counts().reset_index()
@@ -644,6 +645,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
