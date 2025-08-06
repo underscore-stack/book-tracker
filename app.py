@@ -75,14 +75,16 @@ if query:
 
             # Show Enrich button
             if st.button(f"🔍 Enrich", key=f"enrich_{idx}"):
+                meta = st.session_state.get(f"enriched_{idx}", {})
+
                 existing = {
-                    "publisher": book.get("publisher"),
-                    "pub_year": book.get("pub_year"),
-                    "pages": book.get("pages"),
-                    "isbn": st.session_state.get(f"isbn_{idx}", book.get("isbn", "")),
-                    "author_gender": "",  # if available
-                    "fiction_nonfiction": "",  # if available
-                    "tags": [],
+                    "publisher": meta.get("publisher") or book.get("publisher"),
+                    "pub_year": meta.get("pub_year") or book.get("pub_year"),
+                    "pages": meta.get("pages") or book.get("pages"),
+                    "isbn": book.get("isbn"),
+                    "author_gender": meta.get("author_gender", ""),
+                    "fiction_nonfiction": meta.get("fiction_nonfiction", ""),
+                    "tags": meta.get("tags", []),
                     "cover_url": book.get("cover_url")
                 }
                 enriched = enrich_book_metadata(book["title"], book["author"], book.get("isbn"), existing=existing)
@@ -637,6 +639,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
