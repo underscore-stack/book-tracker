@@ -73,17 +73,19 @@ Respond with this JSON:
 
     # 3. Merge with existing (preserve non-empty fields; exclude ISBN!)
     final = {
-        "publisher": existing.get("publisher") if existing.get("publisher") else enriched.get("publisher", ""),
-        "pub_year": existing.get("pub_year") if existing.get("pub_year") else enriched.get("pub_year"),
-        "pages": existing.get("pages") if existing.get("pages") else enriched.get("pages"),
-        "genre": existing.get("genre") if existing.get("genre") else enriched.get("genre", ""),
-        "fiction_nonfiction": existing.get("fiction_nonfiction") if existing.get("fiction_nonfiction") else enriched.get("fiction_nonfiction", ""),
-        "author_gender": existing.get("author_gender") if existing.get("author_gender") else enriched.get("author_gender", ""),
-        "tags": existing.get("tags") if existing.get("tags") else enriched.get("tags", []),
-        "isbn": existing.get("isbn") if existing.get("isbn") else enriched.get("isbn", ""),
-        "cover_url": existing.get("cover_url") if existing.get("cover_url") else enriched.get("cover_url", "")
+        "publisher": enriched.get("publisher") if not existing.get("publisher") else existing["publisher"],
+        "pub_year": enriched.get("pub_year") if not existing.get("pub_year") else existing["pub_year"],
+        "pages": enriched.get("pages") if existing.get("pages") is None else existing["pages"],
+        "genre": enriched.get("genre") if not existing.get("genre") else existing["genre"],
+        "fiction_nonfiction": enriched.get("fiction_nonfiction") if not existing.get("fiction_nonfiction") else existing["fiction_nonfiction"],
+        "author_gender": enriched.get("author_gender") if not existing.get("author_gender") else existing["author_gender"],
+        "tags": enriched.get("tags") if not existing.get("tags") else existing["tags"],
+        "isbn": enriched.get("isbn") if not existing.get("isbn") else existing["isbn"],
+        "cover_url": enriched.get("cover_url") if not existing.get("cover_url") else existing["cover_url"]
     }
 
 
+
     return final
+
 
