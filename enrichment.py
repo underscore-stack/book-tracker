@@ -84,9 +84,11 @@ Respond with this JSON:
         "cover_url": enriched.get("cover_url") if not existing.get("cover_url") else existing["cover_url"]
     }
 
+    print(f"EXISTING pages: {existing.get('pages')}, ENRICHED pages: {enriched.get('pages')}, FINAL pages: {final['pages']}")
 
 
     return final
+
 
 
 
