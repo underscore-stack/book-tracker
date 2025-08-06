@@ -129,9 +129,9 @@ if query:
                         "title": book.get("title", ""),
                         "author": book.get("author", ""),
                         "publisher": meta.get("publisher") or book.get("publisher", ""),
-                        "pub_year": book.get("pub_year"),
+                        "pub_year": meta.get("pub_year") or book.get("pub_year", ""),
                         "pages": meta.get("pages") or book.get("pages"),
-                        "genre": "",
+                        "genre": meta.get("genre", ""),
                         "author_gender": author_gender,
                         "fiction_nonfiction": fiction,
                         "tags": tags,
@@ -140,6 +140,7 @@ if query:
                         "openlibrary_id": book.get("openlibrary_id", ""),
                         "isbn": st.session_state.get(f"isbn_{idx}", "")
                     }
+                    book_data["word_count"] = book_data["pages"] * 250 if book_data["pages"] else None
                     add_book(book_data)
                     st.session_state.edit_message = f"Book '{book['title']}' added!"
                     st.rerun()
@@ -599,16 +600,17 @@ for b in filtered_books:
 
                 if enrich_clicked:
                     existing = {
-                        "publisher": current_publisher,
-                        "pub_year": current_pub_year,
-                        "pages": current_pages,
-                        "genre": current_genre,
-                        "fiction_nonfiction": current_fiction,
-                        "author_gender": current_gender,
-                        "tags": current_tags,
-                        "isbn": current_isbn,
-                        "cover_url": current_cover
+                        "publisher": new_publisher,
+                        "pub_year": new_pub_year,
+                        "pages": new_pages,
+                        "genre": new_genre,
+                        "fiction_nonfiction": new_fiction,
+                        "author_gender": new_gender,
+                        "tags": [t.strip() for t in new_tags.split(",") if t.strip()],
+                        "isbn": new_isbn,
+                        "cover_url": cover_url  # original cover URL
                     }
+
                     enriched = enrich_book_metadata(title, author, isbn, existing=existing)
 
                     if "error" in enriched:
@@ -636,6 +638,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
