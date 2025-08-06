@@ -70,12 +70,16 @@ Respond with this JSON:
             return {"error": f"Failed to parse GPT response: {e}\nRaw: {text}"}
         except Exception as e:
             return {"error": str(e)}
+            
+            # Override protection: keep OpenLibrary (edition) page count if present
+            if existing.get("pages") is not None:
+                enriched["pages"] = existing["pages"]
 
     # 3. Merge with existing (preserve non-empty fields; exclude ISBN!)
     final = {
         "publisher": enriched.get("publisher") if not existing.get("publisher") else existing["publisher"],
         "pub_year": enriched.get("pub_year") if not existing.get("pub_year") else existing["pub_year"],
-        "pages": enriched.get("pages") if existing.get("pages") is None else existing["pages"],
+        "pages": enriched.get("pages"),
         "genre": enriched.get("genre") if not existing.get("genre") else existing["genre"],
         "fiction_nonfiction": enriched.get("fiction_nonfiction") if not existing.get("fiction_nonfiction") else existing["fiction_nonfiction"],
         "author_gender": enriched.get("author_gender") if not existing.get("author_gender") else existing["author_gender"],
@@ -87,5 +91,6 @@ Respond with this JSON:
 
 
     return final
+
 
 
