@@ -73,15 +73,17 @@ Respond with this JSON:
 
     # 3. Merge with existing (preserve non-empty fields; exclude ISBN!)
     final = {
-        "publisher": existing.get("publisher") or enriched.get("publisher", ""),
-        "pub_year": existing.get("pub_year") or enriched.get("pub_year"),
-        "pages": existing.get("pages") or enriched.get("pages"),
-        "genre": existing.get("genre") or enriched.get("genre", ""),
-        "fiction_nonfiction": existing.get("fiction_nonfiction") or enriched.get("fiction_nonfiction", ""),
-        "author_gender": existing.get("author_gender") or enriched.get("author_gender", ""),
-        "tags": existing.get("tags") or enriched.get("tags", []),
-        "isbn": existing.get("isbn", ""),  # ✅ never overwrite
-        "cover_url": existing.get("cover_url") or enriched.get("cover_url", "")
+        "publisher": existing.get("publisher") if existing.get("publisher") else enriched.get("publisher", ""),
+        "pub_year": existing.get("pub_year") if existing.get("pub_year") else enriched.get("pub_year"),
+        "pages": existing.get("pages") if existing.get("pages") else enriched.get("pages"),
+        "genre": existing.get("genre") if existing.get("genre") else enriched.get("genre", ""),
+        "fiction_nonfiction": existing.get("fiction_nonfiction") if existing.get("fiction_nonfiction") else enriched.get("fiction_nonfiction", ""),
+        "author_gender": existing.get("author_gender") if existing.get("author_gender") else enriched.get("author_gender", ""),
+        "tags": existing.get("tags") if existing.get("tags") else enriched.get("tags", []),
+        "isbn": existing.get("isbn") if existing.get("isbn") else enriched.get("isbn", ""),
+        "cover_url": existing.get("cover_url") if existing.get("cover_url") else enriched.get("cover_url", "")
     }
 
+
     return final
+
