@@ -71,9 +71,9 @@ Respond with this JSON:
         except Exception as e:
             return {"error": str(e)}
             
-            # Override protection: keep OpenLibrary (edition) page count if present
-            if existing.get("pages") is not None:
-                enriched["pages"] = existing["pages"]
+    # Override protection: keep OpenLibrary (edition) page count if present
+    if existing.get("pages") is not None:
+        enriched["pages"] = existing["pages"]
 
     # 3. Merge with existing (preserve non-empty fields; exclude ISBN!)
     final = {
@@ -91,6 +91,7 @@ Respond with this JSON:
 
 
     return final
+
 
 
 
