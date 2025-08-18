@@ -443,12 +443,7 @@ else:
         "genre", "author_gender", "fiction_nonfiction", "tags",
         "date_finished", "cover_url", "openlibrary_id", "isbn", "word_count"
     ])
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.altair_chart(chart_books, use_container_width=True)
-    with col2:
-        st.altair_chart(chart_cum_books, use_container_width=True)
+
 
 if not df.empty:
     try:
@@ -645,6 +640,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
