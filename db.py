@@ -1,54 +1,73 @@
-# db.py (Supabase version using st.secrets)
-import streamlit as st
-from supabase import create_client
+# db.py (Neon + psycopg2)
+import os
+import psycopg2
+import psycopg2.extras
 
-# Load secrets from .streamlit/secrets.toml or Streamlit Cloud
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+  # Neon database URL (set this in your Streamlit secrets or .env)
+NEON_DB_URL = os.getenv("NEON_DB_URL")
 
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Use a connection pool in production if needed
+def get_connection():
+    return psycopg2.connect(NEON_DB_URL, cursor_factory=psycopg2.extras.RealDictCursor)
 
 def add_book(book_data):
-    try:
-        supabase.table("books").insert(book_data).execute()
-        print("📦 Response:", response)
-        print("✅ Book added")
-    except Exception as e:
-        print("❌ Error adding book:", e)
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO books (
+                    title, author, publisher, pub_year, pages, genre,
+                    author_gender, fiction_nonfiction, tags,
+                    date_finished, cover_url, openlibrary_id, isbn, word_count
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            """, (
+                book_data.get("title"),
+                book_data.get("author"),
+                book_data.get("publisher"),
+                book_data.get("pub_year"),
+                book_data.get("pages"),
+                book_data.get("genre"),
+                book_data.get("author_gender"),
+                book_data.get("fiction_nonfiction"),
+                book_data.get("tags"),
+                book_data.get("date_finished"),
+                book_data.get("cover_url"),
+                book_data.get("openlibrary_id"),
+                book_data.get("isbn"),
+                book_data.get("pages") * 250 if book_data.get("pages") else None
+            ))
 
 def get_all_books():
-    try:
-        response = supabase.table("books").select("*").order("id", desc=True).execute()
-        return response.data
-    except Exception as e:
-        print("❌ Error fetching books:", e)
-        return []
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM books ORDER BY date_finished DESC;")
+            return cursor.fetchall()
 
 def update_book_metadata_full(book_id, title, author, publisher, pub_year, pages, genre, gender, fiction, tags, date_finished, isbn, openlibrary_id):
-    update_data = {
-        "title": title,
-        "author": author,
-        "publisher": publisher,
-        "pub_year": pub_year,
-        "pages": pages,
-        "genre": genre,
-        "author_gender": gender,
-        "fiction_nonfiction": fiction,
-        "tags": tags,
-        "date_finished": date_finished,
-        "isbn": isbn,
-        "openlibrary_id": openlibrary_id,
-        "word_count": pages * 250 if pages else None
-    }
-    try:
-        supabase.table("books").update(update_data).eq("id", book_id).execute()
-        print("✅ Book updated")
-    except Exception as e:
-        print("❌ Error updating book:", e)
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE books SET
+                    title = %s,
+                    author = %s,
+                    publisher = %s,
+                    pub_year = %s,
+                    pages = %s,
+                    genre = %s,
+                    author_gender = %s,
+                    fiction_nonfiction = %s,
+                    tags = %s,
+                    date_finished = %s,
+                    isbn = %s,
+                    openlibrary_id = %s,
+                    word_count = %s
+                WHERE id = %s;
+            """, (
+                title, author, publisher, pub_year, pages, genre, gender,
+                fiction, tags, date_finished, isbn, openlibrary_id,
+                pages * 250 if pages else None, book_id
+            ))
 
 def delete_book(book_id):
-    try:
-        supabase.table("books").delete().eq("id", book_id).execute()
-        print("✅ Book deleted")
-    except Exception as e:
-        print("❌ Error deleting book:", e)
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM books WHERE id = %s", (book_id,))
