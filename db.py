@@ -63,7 +63,6 @@ def add_book(book_data):
                     book_data.get("pages") * 250 if book_data.get("pages") else None
                 ))
 
-
 def get_all_books():
     with get_connection() as conn:
         with conn.cursor() as cursor:
@@ -99,5 +98,6 @@ def delete_book(book_id):
     with get_connection() as conn:
         with conn.cursor() as cursor:
             cursor.execute("DELETE FROM books WHERE id = %s", (book_id,))
+
 
 
