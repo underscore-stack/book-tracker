@@ -26,8 +26,8 @@ def add_book(book_data):
                     book_data.get("title"),
                     book_data.get("author"),
                     book_data.get("publisher"),
-                    book_data.get("pub_year"),
-                    book_data.get("pages"),
+                    bigint(book_data["pub_year"]) if book_data.get("pub_year") not in [None, ""] else None,
+                    bigint(book_data["pages"]) if book_data.get("pages") not in [None, ""] else None,
                     book_data.get("genre"),
                     book_data.get("author_gender"),
                     book_data.get("fiction_nonfiction"),
@@ -36,7 +36,8 @@ def add_book(book_data):
                     book_data.get("cover_url"),
                     book_data.get("openlibrary_id"),
                     book_data.get("isbn"),
-                    book_data.get("pages") * 250 if book_data.get("pages") else None
+                    bigint(book_data["pages"]) * 250 if book_data.get("pages") not in [None, ""] else None
+
                 ))
             else:
                 # Normal path: let Neon auto-assign id
@@ -50,8 +51,8 @@ def add_book(book_data):
                     book_data.get("title"),
                     book_data.get("author"),
                     book_data.get("publisher"),
-                    book_data.get("pub_year"),
-                    book_data.get("pages"),
+                    bigint(book_data["pub_year"]) if book_data.get("pub_year") not in [None, ""] else None,
+                    bigint(book_data["pages"]) if book_data.get("pages") not in [None, ""] else None,
                     book_data.get("genre"),
                     book_data.get("author_gender"),
                     book_data.get("fiction_nonfiction"),
@@ -60,7 +61,7 @@ def add_book(book_data):
                     book_data.get("cover_url"),
                     book_data.get("openlibrary_id"),
                     book_data.get("isbn"),
-                    book_data.get("pages") * 250 if book_data.get("pages") else None
+                    bigint(book_data["pages"]) * 250 if book_data.get("pages") not in [None, ""] else None
                 ))
 
 def get_all_books():
@@ -98,6 +99,7 @@ def delete_book(book_id):
     with get_connection() as conn:
         with conn.cursor() as cursor:
             cursor.execute("DELETE FROM books WHERE id = %s", (book_id,))
+
 
 
 
