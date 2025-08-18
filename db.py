@@ -13,28 +13,56 @@ def get_connection():
 def add_book(book_data):
     with get_connection() as conn:
         with conn.cursor() as cursor:
-            cursor.execute("""
-                INSERT INTO books (
-                    title, author, publisher, pub_year, pages, genre,
-                    author_gender, fiction_nonfiction, tags,
-                    date_finished, cover_url, openlibrary_id, isbn, word_count
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-            """, (
-                book_data.get("title"),
-                book_data.get("author"),
-                book_data.get("publisher"),
-                book_data.get("pub_year"),
-                book_data.get("pages"),
-                book_data.get("genre"),
-                book_data.get("author_gender"),
-                book_data.get("fiction_nonfiction"),
-                book_data.get("tags"),
-                book_data.get("date_finished"),
-                book_data.get("cover_url"),
-                book_data.get("openlibrary_id"),
-                book_data.get("isbn"),
-                book_data.get("pages") * 250 if book_data.get("pages") else None
-            ))
+            if "id" in book_data:
+                # Used during migration to preserve original IDs
+                cursor.execute("""
+                    INSERT INTO books (
+                        id, title, author, publisher, pub_year, pages, genre,
+                        author_gender, fiction_nonfiction, tags,
+                        date_finished, cover_url, openlibrary_id, isbn, word_count
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (
+                    book_data["id"],
+                    book_data.get("title"),
+                    book_data.get("author"),
+                    book_data.get("publisher"),
+                    book_data.get("pub_year"),
+                    book_data.get("pages"),
+                    book_data.get("genre"),
+                    book_data.get("author_gender"),
+                    book_data.get("fiction_nonfiction"),
+                    book_data.get("tags"),
+                    book_data.get("date_finished"),
+                    book_data.get("cover_url"),
+                    book_data.get("openlibrary_id"),
+                    book_data.get("isbn"),
+                    book_data.get("pages") * 250 if book_data.get("pages") else None
+                ))
+            else:
+                # Normal path: let Neon auto-assign id
+                cursor.execute("""
+                    INSERT INTO books (
+                        title, author, publisher, pub_year, pages, genre,
+                        author_gender, fiction_nonfiction, tags,
+                        date_finished, cover_url, openlibrary_id, isbn, word_count
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (
+                    book_data.get("title"),
+                    book_data.get("author"),
+                    book_data.get("publisher"),
+                    book_data.get("pub_year"),
+                    book_data.get("pages"),
+                    book_data.get("genre"),
+                    book_data.get("author_gender"),
+                    book_data.get("fiction_nonfiction"),
+                    book_data.get("tags"),
+                    book_data.get("date_finished"),
+                    book_data.get("cover_url"),
+                    book_data.get("openlibrary_id"),
+                    book_data.get("isbn"),
+                    book_data.get("pages") * 250 if book_data.get("pages") else None
+                ))
+
 
 def get_all_books():
     with get_connection() as conn:
@@ -71,4 +99,5 @@ def delete_book(book_id):
     with get_connection() as conn:
         with conn.cursor() as cursor:
             cursor.execute("DELETE FROM books WHERE id = %s", (book_id,))
+
 
