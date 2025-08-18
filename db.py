@@ -39,7 +39,7 @@ def add_book(book_data):
 def get_all_books():
     with get_connection() as conn:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT * FROM books ORDER BY date_finished DESC;")
+            cursor.execute("SELECT * FROM books ORDER BY id DESC;")
             return cursor.fetchall()
 
 def update_book_metadata_full(book_id, title, author, publisher, pub_year, pages, genre, gender, fiction, tags, date_finished, isbn, openlibrary_id):
@@ -71,3 +71,4 @@ def delete_book(book_id):
     with get_connection() as conn:
         with conn.cursor() as cursor:
             cursor.execute("DELETE FROM books WHERE id = %s", (book_id,))
+
