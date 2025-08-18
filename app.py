@@ -435,6 +435,8 @@ if filtered_books:
 
         st.altair_chart(combined, use_container_width=True)
         st.altair_chart(chart_cum_words, use_container_width=True)
+        st.altair_chart(chart_books, use_container_width=True)
+        st.altair_chart(chart_cum_books, use_container_width=True)
 
 else:
     st.info("No filtered books to display.")
@@ -640,6 +642,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
