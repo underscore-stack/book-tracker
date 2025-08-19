@@ -30,9 +30,8 @@ def add_book(book_data):
                         id, title, author, publisher, pub_year, pages, genre,
                         author_gender, fiction_nonfiction, tags,
                         date_finished, cover_url, openlibrary_id, isbn, word_count
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
                 """, (
-                    book_data["id"],
                     book_data.get("title"),
                     book_data.get("author"),
                     book_data.get("publisher"),
@@ -124,6 +123,7 @@ def delete_book(book_id):
     with get_connection() as conn:
         with conn.cursor() as cursor:
             cursor.execute("DELETE FROM books WHERE id = %s", (book_id,))
+
 
 
 
