@@ -417,7 +417,11 @@ if filtered_books:
                       base_f.mark_text(radius=75, fontSize=25, fontWeight="bold", fill="white").encode(text="count:Q")
 
         # Author gender pie chart
-        pie_data_g = df["author_gender"].value_counts().reset_index()
+        pie_data_g = (
+            df[df["author_gender"].isin(["Male", "Female"])]
+            ["author_gender"].value_counts()
+            .reset_index()
+        )
         pie_data_g.columns = ["author_gender", "count"]
         base_g = alt.Chart(pie_data_g).encode(
             theta=alt.Theta("count:Q", stack=True),
@@ -642,6 +646,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
