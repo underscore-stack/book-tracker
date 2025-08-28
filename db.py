@@ -1,131 +1,84 @@
-# db.py (Neon + psycopg2)
+# db.py — Cockroach version
 import os
 import psycopg2
 import psycopg2.extras
 
-NEON_DB_URL = os.getenv("NEON_DB_URL")
+def _safe_int(v):
+    try:
+        return int(v) if v not in (None, "", "NULL") else None
+    except Exception:
+        return None
+
+def _safe_word_count(pages):
+    p = _safe_int(pages)
+    return p * 250 if p else None
 
 def get_connection():
-    return psycopg2.connect(NEON_DB_URL, cursor_factory=psycopg2.extras.RealDictCursor)
-
-def safe_bigint(value):
-    """Convert to int (for BIGINT) or return None."""
-    if value in (None, ""):
-        return None
+    # Prefer Streamlit secrets; fall back to env var
     try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
+        import streamlit as st
+        dsn = st.secrets["cockroach"]["dsn"]
+    except Exception:
+        dsn = os.getenv("COCKROACH_DB_URL")
+
+    conn = psycopg2.connect(
+        dsn,
+        cursor_factory=psycopg2.extras.RealDictCursor,
+    )
+    conn.autocommit = True  # helpful for DDL; fine for this app
+    with conn.cursor() as cur:
+        # Ensure we’re on the right DB/schema and future selects find public.books
+        cur.execute("SET application_name = 'book-tracker';")
+        cur.execute("SET search_path = public;")
+    return conn
 
 def add_book(book_data):
-    with get_connection() as conn:
-        with conn.cursor() as cursor:
-            pages_val = safe_bigint(book_data.get("pages"))
-            pub_year_val = safe_bigint(book_data.get("pub_year"))
-
-            if "id" in book_data:
-                # Used during migration to preserve original IDs
-                cursor.execute("""
-                    INSERT INTO books (
-                        id, title, author, publisher, pub_year, pages, genre,
-                        author_gender, fiction_nonfiction, tags,
-                        date_finished, cover_url, openlibrary_id, isbn, word_count
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                """, (
-                    book_data.get("title"),
-                    book_data.get("author"),
-                    book_data.get("publisher"),
-                    pub_year_val,
-                    pages_val,
-                    book_data.get("genre"),
-                    book_data.get("author_gender"),
-                    book_data.get("fiction_nonfiction"),
-                    book_data.get("tags"),
-                    book_data.get("date_finished"),
-                    book_data.get("cover_url"),
-                    book_data.get("openlibrary_id"),
-                    book_data.get("isbn"),
-                    pages_val * 250 if pages_val else None
-                ))
-            else:
-                # Normal path: let Neon auto-assign id
-                cursor.execute("""
-                    INSERT INTO books (
-                        title, author, publisher, pub_year, pages, genre,
-                        author_gender, fiction_nonfiction, tags,
-                        date_finished, cover_url, openlibrary_id, isbn, word_count
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                """, (
-                    book_data.get("title"),
-                    book_data.get("author"),
-                    book_data.get("publisher"),
-                    pub_year_val,
-                    pages_val,
-                    book_data.get("genre"),
-                    book_data.get("author_gender"),
-                    book_data.get("fiction_nonfiction"),
-                    book_data.get("tags"),
-                    book_data.get("date_finished"),
-                    book_data.get("cover_url"),
-                    book_data.get("openlibrary_id"),
-                    book_data.get("isbn"),
-                    pages_val * 250 if pages_val else None
-                ))
-
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("""
+            INSERT INTO books (
+                title, author, publisher, pub_year, pages, genre,
+                author_gender, fiction_nonfiction, tags,
+                date_finished, cover_url, openlibrary_id, isbn, word_count
+            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (
+            book_data.get("title"),
+            book_data.get("author"),
+            book_data.get("publisher"),
+            _safe_int(book_data.get("pub_year")),
+            _safe_int(book_data.get("pages")),
+            book_data.get("genre"),
+            book_data.get("author_gender"),
+            book_data.get("fiction_nonfiction"),
+            book_data.get("tags"),
+            book_data.get("date_finished"),
+            book_data.get("cover_url"),
+            book_data.get("openlibrary_id"),
+            book_data.get("isbn"),
+            _safe_word_count(book_data.get("pages")),
+        ))
 
 def get_all_books():
-    with get_connection() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT * FROM books ORDER BY id DESC;")
-            return cursor.fetchall()
-          
-def update_book_metadata_full(book_id, title, author, publisher, pub_year, pages,
-                              genre, gender, fiction, tags, date_finished, isbn, openlibrary_id):
-    with get_connection() as conn:
-        with conn.cursor() as cursor:
-            pages_val = safe_bigint(pages)
-            pub_year_val = safe_bigint(pub_year)
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("SELECT * FROM books ORDER BY id DESC;")
+        return cur.fetchall()
 
-            cursor.execute("""
-                UPDATE books SET
-                    title = %s,
-                    author = %s,
-                    publisher = %s,
-                    pub_year = %s,
-                    pages = %s,
-                    genre = %s,
-                    author_gender = %s,
-                    fiction_nonfiction = %s,
-                    tags = %s,
-                    date_finished = %s,
-                    isbn = %s,
-                    openlibrary_id = %s,
-                    word_count = %s
-                WHERE id = %s;
-            """, (
-                title,
-                author,
-                publisher,
-                pub_year_val,
-                pages_val,
-                genre,
-                gender,
-                fiction,
-                tags,
-                date_finished,
-                isbn,
-                openlibrary_id,
-                pages_val * 250 if pages_val else None,
-                book_id
-            ))
+def update_book_metadata_full(book_id, title, author, publisher, pub_year, pages, genre, gender, fiction, tags, date_finished, isbn, openlibrary_id):
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("""
+            UPDATE books SET
+                title=%s, author=%s, publisher=%s, pub_year=%s, pages=%s, genre=%s,
+                author_gender=%s, fiction_nonfiction=%s, tags=%s, date_finished=%s,
+                isbn=%s, openlibrary_id=%s, word_count=%s
+            WHERE id=%s
+        """, (
+            title, author, publisher,
+            _safe_int(pub_year), _safe_int(pages), genre,
+            gender, fiction, tags, date_finished,
+            isbn, openlibrary_id,
+            _safe_word_count(pages),
+            book_id,
+        ))
 
 def delete_book(book_id):
-    with get_connection() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("DELETE FROM books WHERE id = %s", (book_id,))
-
-
-
-
-
-
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("DELETE FROM books WHERE id=%s", (book_id,))
