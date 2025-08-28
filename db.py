@@ -1,4 +1,4 @@
-# db.py — Cockroach version
+# db.py — Cockroach version (patch)
 import os
 import psycopg2
 import psycopg2.extras
@@ -15,19 +15,19 @@ def _safe_word_count(pages):
 
 def get_connection():
     # Prefer Streamlit secrets; fall back to env var
+    dsn = None
     try:
         import streamlit as st
         dsn = st.secrets["cockroach"]["dsn"]
     except Exception:
         dsn = os.getenv("COCKROACH_DB_URL")
 
-    conn = psycopg2.connect(
-        dsn,
-        cursor_factory=psycopg2.extras.RealDictCursor,
-    )
-    conn.autocommit = True  # helpful for DDL; fine for this app
+    if not dsn:
+        raise RuntimeError("Cockroach DSN not set. Put it in st.secrets['cockroach']['dsn'] or COCKROACH_DB_URL.")
+
+    conn = psycopg2.connect(dsn, cursor_factory=psycopg2.extras.RealDictCursor)
+    conn.autocommit = True
     with conn.cursor() as cur:
-        # Ensure we’re on the right DB/schema and future selects find public.books
         cur.execute("SET application_name = 'book-tracker';")
         cur.execute("SET search_path = public;")
     return conn
@@ -59,7 +59,14 @@ def add_book(book_data):
 
 def get_all_books():
     with get_connection() as conn, conn.cursor() as cur:
-        cur.execute("SELECT * FROM books ORDER BY id DESC;")
+        cur.execute("""
+            SELECT
+                id, title, author, publisher, pub_year, pages, genre,
+                author_gender, fiction_nonfiction, tags,
+                date_finished, cover_url, openlibrary_id, isbn, word_count
+            FROM books
+            ORDER BY id DESC;
+        """)
         return cur.fetchall()
 
 def update_book_metadata_full(book_id, title, author, publisher, pub_year, pages, genre, gender, fiction, tags, date_finished, isbn, openlibrary_id):
