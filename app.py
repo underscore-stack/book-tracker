@@ -417,7 +417,7 @@ if filtered_books:
             tooltip=["fiction_nonfiction:N", "count:Q", alt.Tooltip("percent:Q", format=".1f", title="Percent")]
         )
         pie_chart_f = base_f.mark_arc(innerRadius=30).properties(title="Fiction vs Non-fiction") + \
-                      base_f.mark_text(radius=75, fontSize=25, fontWeight="bold", fill="white").encode(text=alt.Text("percent:Q", format=".1f")
+                      base_f.mark_text(radius=75, fontSize=25, fontWeight="bold", fill="white").encode(text=alt.Text("percent:Q", format=".1f"))
 
         # Author gender pie chart
         pie_data_g = df["author_gender"].value_counts(normalize=False).reset_index()
@@ -650,6 +650,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
