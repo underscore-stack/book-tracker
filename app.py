@@ -407,17 +407,23 @@ if filtered_books:
 
 
         # Fiction vs Non-fiction pie chart
-        pie_data_f = df["fiction_nonfiction"].value_counts().reset_index()
+        pie_data_f = df["fiction_nonfiction"].value_counts(normalize=False).reset_index()
         pie_data_f.columns = ["fiction_nonfiction", "count"]
         pie_data_f["percent"] = pie_data_f["count"] / pie_data_f["count"].sum() * 100
         
         base_f = alt.Chart(pie_data_f).encode(
             theta=alt.Theta("count:Q", stack=True),
             color=alt.Color("fiction_nonfiction:N", title="Fiction/Non-fiction"),
-            tooltip=["fiction_nonfiction:N", "count:Q"]
+            tooltip=["fiction_nonfiction:N", "count:Q"]  # only category + count
         )
-        pie_chart_f = base_f.mark_arc(innerRadius=30).properties(title{="Fiction vs Non-fiction", "align": "center"}) + \
-                      base_f.mark_text(radius=75, fontSize=25, fontWeight="bold", fill="white").encode("percent:Q", format=".1f", formatType = "number")
+        
+        pie_chart_f = (
+            base_f.mark_arc(innerRadius=30)
+            .properties(title={"text": "Fiction vs Non-fiction", "align": "center"})
+            + base_f.mark_text(radius=75, fontSize=20, fontWeight="bold", fill="white").encode(
+                text=alt.Text("percent:Q", format=".1f", formatType="number")  # keep numeric
+            )
+        )
         
         # Add % manually to labels
         pie_chart_f = pie_chart_f.encode(
@@ -665,6 +671,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
