@@ -413,7 +413,7 @@ if filtered_books:
         
         base_f = alt.Chart(pie_data_f).encode(
             theta=alt.Theta("count:Q", stack=True),
-            color=alt.Color("fiction_nonfiction:N", title="Fiction/Non-fiction")
+            color=alt.Color("fiction_nonfiction:N", title="Fiction/Non-fiction"),
             tooltip=["fiction_nonfiction:N", "count:Q", alt.Tooltip("percent:Q", format=".1f", title="Percent")]
         )
         pie_chart_f = base_f.mark_arc(innerRadius=30).properties(title="Fiction vs Non-fiction") + \
@@ -650,6 +650,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
