@@ -414,25 +414,40 @@ if filtered_books:
         base_f = alt.Chart(pie_data_f).encode(
             theta=alt.Theta("count:Q", stack=True),
             color=alt.Color("fiction_nonfiction:N", title="Fiction/Non-fiction"),
-            tooltip=["fiction_nonfiction:N", "count:Q", alt.Tooltip("percent:Q", format=".1f", title="Percent")]
+            tooltip=["fiction_nonfiction:N", "count:Q"]
         )
-        pie_chart_f = base_f.mark_arc(innerRadius=30).properties(title="Fiction vs Non-fiction") + \
-                      base_f.mark_text(radius=75, fontSize=25, fontWeight="bold", fill="white").encode(text=alt.Text("percent:Q", format=".1f"))
-
-        # Author gender pie chart
+        pie_chart_f = base_f.mark_arc(innerRadius=30).properties(title="Fiction vs Non-fiction", "align": "center") + \
+                      base_f.mark_text(radius=75, fontSize=25, fontWeight="bold", fill="white").encode("percent:Q", format=".1f", formatType = "number")
+        
+        # Add % manually to labels
+        pie_chart_f = pie_chart_f.encode(
+            text=alt.Text("percent:Q", format=".1f")
+        ).transform_calculate(
+            label="format(datum.percent, '.1f') + '%'"
+        ).mark_text(radius=75, fontSize=20, fontWeight="bold", fill="white").encode(
+            text="label:N"
+        )
+        
+        # Author gender pie chart (omit 'Multiple')
         pie_data_g = df["author_gender"].value_counts(normalize=False).reset_index()
         pie_data_g.columns = ["author_gender", "count"]
+        pie_data_g = pie_data_g[pie_data_g["author_gender"].str.lower() != "multiple"]  # filter out 'multiple'
         pie_data_g["percent"] = pie_data_g["count"] / pie_data_g["count"].sum() * 100
         
         base_g = alt.Chart(pie_data_g).encode(
             theta=alt.Theta("count:Q", stack=True),
             color=alt.Color("author_gender:N", title="Gender"),
-            tooltip=["author_gender:N", "count:Q", alt.Tooltip("percent:Q", format=".1f", title="Percent")]
+            tooltip=["author_gender:N", "count:Q"]  # only category + count
         )
-        pie_chart_g = base_g.mark_arc(innerRadius=30).properties(title="Gender Divide") + \
-                      base_g.mark_text(radius=75, fontSize=20, fontWeight="bold", fill="white").encode(
-                          text=alt.Text("percent:Q", format=".1f")
-                      )
+        
+        pie_chart_g = (
+            base_g.mark_arc(innerRadius=30)
+            .properties(title={"text": "Gender Divide", "align": "center"})
+            + base_g.mark_text(radius=75, fontSize=20, fontWeight="bold", fill="white")
+            .transform_calculate(
+                label="format(datum.percent, '.1f') + '%'"
+            ).encode(text="label:N")
+        )
 
         # Display charts
         col1, col2 = st.columns(2)
@@ -650,6 +665,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
