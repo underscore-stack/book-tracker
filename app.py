@@ -8,9 +8,16 @@ from enrichment import enrich_book_metadata
 
 CSV_URL = "https://raw.githubusercontent.com/underscore-stack/BookTracker-Data/main/books_export.csv"
 
-@st.cache_data(ttl=3600)  # cache for 1 hour
+
+@st.cache_data(ttl=600)
 def load_books():
     try:
+        # Manual HEAD check
+        r = requests.head(CSV_URL)
+        st.write(f"HTTP status: {r.status_code}")
+        if r.status_code != 200:
+            raise Exception(f"GitHub returned {r.status_code}")
+
         df = pd.read_csv(CSV_URL)
         st.success(f"✅ Loaded {len(df)} books from GitHub")
         return df
@@ -19,6 +26,10 @@ def load_books():
         return pd.DataFrame()
 
 books = load_books()
+
+if books.empty:
+    st.info("No books found or data unavailable.")
+    st.stop()
 
 st.set_page_config(page_title="Book Tracker", layout="wide")
 st.title("📚 Book Tracker")
@@ -683,6 +694,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
