@@ -123,8 +123,8 @@ if query:
 
             # Start the form inside the expander
             with st.form(key=f"form_{idx}"):
-                if book.get("cover_url") and book["cover_url"].startswith("http"):
-                    st.image(book["cover_url"], width=120)
+                if isinstance(cover_url, str) and cover_url.startswith("http"):
+                    st.image(cover_url, width=120)
                 else:
                     st.caption("No cover available")
 
@@ -708,6 +708,7 @@ for b in filtered_books.to_dict(orient="records"):
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
