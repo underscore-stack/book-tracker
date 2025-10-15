@@ -7,7 +7,7 @@ from datetime import datetime
 from openlibrary import search_books, get_editions_for_work
 from enrichment import enrich_book_metadata
 
-CSV_URL = "https://raw.githubusercontent.com/underscore-stack/BookTracker-Data/main/books_export.csv"
+CSV_URL = "https://raw.githubusercontent.com/underscore-stack/BookTracker-Data/refs/heads/main/books_export.csv"
 
 
 @st.cache_data(ttl=600)
@@ -695,6 +695,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
