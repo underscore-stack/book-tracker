@@ -47,6 +47,7 @@ if st.session_state.get("deleted_message"):
 # --- Search section ---
 st.header("🔎 Search for a book to add")
 query = st.text_input("Enter book title or author")
+st.write("🧾 Sample cover URLs:", books["cover_url"].head().tolist())
 
 if query:
     results = search_books(query)
@@ -708,6 +709,7 @@ for b in filtered_books.to_dict(orient="records"):
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
