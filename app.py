@@ -343,7 +343,7 @@ st.markdown("""
 
 
 #visualisations
-if filtered_books:
+if not filtered_books.empty:
     df = pd.DataFrame(filtered_books)[[
         "id", "title", "author", "publisher", "pub_year", "pages",
         "genre", "author_gender", "fiction_nonfiction", "tags",
@@ -708,6 +708,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
