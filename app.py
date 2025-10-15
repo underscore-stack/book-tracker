@@ -165,8 +165,8 @@ st.header("📖 Your Library")
 books = load_books()
 filtered_books = []
 
-if not books:
-    st.info("No books saved yet.")
+if books.empty:
+    st.info("No books available yet.")
 else:
     # Extract unique filter values
     dates = [b["date_finished"] for b in books if b.get("date_finished") and "-" in b["date_finished"]]
@@ -683,6 +683,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
