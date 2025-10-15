@@ -181,7 +181,7 @@ if books.empty:
     st.info("No books available yet.")
 else:
     # Extract unique filter values
-    dates = [b["date_finished"] for b in books if b.get("date_finished") and "-" in b["date_finished"]]
+    dates = books["date_finished"].dropna()
     years = sorted({d.split("-")[0] for d in dates})
     month_codes = sorted({d.split("-")[1] for d in dates if len(d.split("-")) > 1})
     months = {
@@ -695,6 +695,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
