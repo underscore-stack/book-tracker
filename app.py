@@ -592,7 +592,7 @@ for b in filtered_books.to_dict(orient="records"):
 
     cols = st.columns([1, 9, 1])
     with cols[0]:
-        if cover_url.startswith("http"):
+        if isinstance(cover_url, str) and cover_url.startswith("http"):
             st.image(cover_url, width=60)
         else:
             st.empty()
@@ -708,6 +708,7 @@ for b in filtered_books.to_dict(orient="records"):
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
