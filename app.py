@@ -175,94 +175,107 @@ if query:
 # --- Library Filters + View ---
 st.header("📖 Your Library")
 books = load_books()
-filtered_books = []
+filtered_books = pd.DataFrame()
 
 if books.empty:
     st.info("No books available yet.")
 else:
-    # Extract unique filter values
-    dates = books["date_finished"].dropna()
-    years = sorted({d.split("-")[0] for d in dates})
-    month_codes = sorted({d.split("-")[1] for d in dates if len(d.split("-")) > 1})
+    # --- Ensure correct types ---
+    books["date_finished"] = books["date_finished"].astype(str).fillna("")
+
+    # --- Extract unique filter values ---
+    valid_dates = books[books["date_finished"].str.contains("-")]
+    years = sorted(valid_dates["date_finished"].str.split("-").str[0].unique())
+    month_codes = sorted(
+        valid_dates["date_finished"]
+        .str.split("-")
+        .str[1]
+        .dropna()
+        .unique()
+    )
     months = {
         "01": "January", "02": "February", "03": "March", "04": "April",
         "05": "May", "06": "June", "07": "July", "08": "August",
         "09": "September", "10": "October", "11": "November", "12": "December"
     }
 
-
-    # Session state defaults
+    # --- Session state defaults ---
     default_filters = {
-        "selected_year": "All",
-        "selected_month": "All",
-        "fiction_filter": "All",
-        "gender_filter": "All",
-        "tag_filter": ""
+        "selected_years": [],
+        "selected_months": [],
+        "fiction_filter": [],
+        "gender_filter": [],
+        "tag_filter": "",
+        "search_query": "",
     }
     for key, val in default_filters.items():
-        if key not in st.session_state:
-            st.session_state[key] = val
+        st.session_state.setdefault(key, val)
 
-    # Sidebar filter controls
+    # --- Sidebar filter controls ---
     st.sidebar.header("📊 Filter Your Library")
     if st.sidebar.button("🔄 Reset Filters"):
         for key, val in default_filters.items():
-            st.session_state.selected_years = []
-            st.session_state.selected_months = []
-            st.session_state.fiction_filter = []
-            st.session_state.gender_filter = []
-            st.session_state.tag_filter = ""
+            st.session_state[key] = val
 
     st.session_state.selected_years = st.sidebar.multiselect(
-        "Year Finished", years
+        "Year Finished", years, default=st.session_state.selected_years
     )
 
     st.session_state.selected_months = st.sidebar.multiselect(
-        "Month Finished", [months[m] for m in month_codes]
+        "Month Finished", [months[m] for m in month_codes if m in months],
+        default=st.session_state.selected_months
     )
+
     st.session_state.fiction_filter = st.sidebar.multiselect(
-        "Fiction / Non-fiction", ["Fiction", "Non-fiction"]
+        "Fiction / Non-fiction", ["Fiction", "Non-fiction"],
+        default=st.session_state.fiction_filter
     )
+
     gender_options = ["Male", "Female", "Nonbinary", "Multiple", "Unknown"]
     st.session_state.gender_filter = st.sidebar.multiselect(
-        "Author Gender", gender_options
+        "Author Gender", gender_options,
+        default=st.session_state.gender_filter
     )
+
     st.sidebar.text_input("Tag contains...", key="tag_filter")
     st.sidebar.text_input("Search title or author", key="search_query")
 
-    # Filter logic
-    filtered_books = []
-    for b in books:
+    # --- Apply filters ---
+    def matches_filters(row):
         try:
-            date_str = b.get("date_finished", "")
-            if not date_str or "-" not in date_str:
-                continue
-    
+            # Date filter
+            date_str = str(row.get("date_finished", ""))
+            if "-" not in date_str:
+                return False
             year, month = date_str.split("-")
-            if month not in months:
-                continue
-    
-            month_name = months[month]
-    
-            year_ok = not st.session_state.selected_years or year in st.session_state.selected_years
-            month_ok = not st.session_state.selected_months or month_name in st.session_state.selected_months
-            fiction_ok = not st.session_state.fiction_filter or b.get("fiction_nonfiction", "") in st.session_state.fiction_filter
-            gender_ok = not st.session_state.gender_filter or b.get("author_gender", "") in st.session_state.gender_filter
-            tag_ok = not st.session_state.tag_filter or st.session_state.tag_filter.lower() in (b.get("tags") or "").lower()
-            search_query = st.session_state.get("search_query", "").strip().lower()
-            search_ok = (
-                not search_query or
-                search_query in (b.get("title") or "").lower() or
-                search_query in (b.get("author") or "").lower()
-            )
-    
-            if year_ok and month_ok and fiction_ok and gender_ok and tag_ok and search_ok:
-                filtered_books.append(b)
-    
-        except Exception as e:
-            st.warning(f"Skipping bad book entry: {b.get('title', 'Untitled')} — {e}")
+            month_name = months.get(month, "")
 
+            # Individual filters
+            if st.session_state.selected_years and year not in st.session_state.selected_years:
+                return False
+            if st.session_state.selected_months and month_name not in st.session_state.selected_months:
+                return False
+            if st.session_state.fiction_filter and row.get("fiction_nonfiction", "") not in st.session_state.fiction_filter:
+                return False
+            if st.session_state.gender_filter and row.get("author_gender", "") not in st.session_state.gender_filter:
+                return False
+            if st.session_state.tag_filter and st.session_state.tag_filter.lower() not in str(row.get("tags", "")).lower():
+                return False
+
+            query = st.session_state.get("search_query", "").strip().lower()
+            if query:
+                title = str(row.get("title", "")).lower()
+                author = str(row.get("author", "")).lower()
+                if query not in title and query not in author:
+                    return False
+            return True
+        except Exception as e:
+            st.warning(f"Skipping bad book entry: {getattr(row, 'title', 'Untitled')} — {e}")
+            return False
+
+    filtered_books = books[books.apply(matches_filters, axis=1)]
     st.subheader(f"📚 Showing {len(filtered_books)} book(s)")
+
 
 from datetime import datetime
 
@@ -695,6 +708,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
