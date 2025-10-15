@@ -2,9 +2,23 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 from datetime import datetime
-from db import add_book, get_all_books, update_book_metadata_full, delete_book
+#from db import add_book, get_all_books, update_book_metadata_full, delete_book
 from openlibrary import search_books, get_editions_for_work
 from enrichment import enrich_book_metadata
+
+CSV_URL = "https://raw.githubusercontent.com/underscore-stack/BookTracker-Data/main/books_export.csv"
+
+@st.cache_data(ttl=3600)  # cache for 1 hour
+def load_books():
+    try:
+        df = pd.read_csv(CSV_URL)
+        st.success(f"✅ Loaded {len(df)} books from GitHub")
+        return df
+    except Exception as e:
+        st.error(f"❌ Could not load CSV: {e}")
+        return pd.DataFrame()
+
+books = load_books()
 
 st.set_page_config(page_title="Book Tracker", layout="wide")
 st.title("📚 Book Tracker")
@@ -148,7 +162,7 @@ if query:
 
 # --- Library Filters + View ---
 st.header("📖 Your Library")
-books = get_all_books()
+books = load_books()
 filtered_books = []
 
 if not books:
