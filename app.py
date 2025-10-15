@@ -562,7 +562,7 @@ if not df.empty:
 
 
 
-for b in filtered_books:
+for b in filtered_books.to_dict(orient="records"):
     book_id = b["id"]
     # Ensure session keys are initialized
     if f"edit_{book_id}" not in st.session_state:
@@ -708,6 +708,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
