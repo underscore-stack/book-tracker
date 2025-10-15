@@ -1,7 +1,8 @@
 streamlit
 pandas
-altair
 requests
+altair
 supabase
 openai>=1.0.0
 psycopg2-binary>=2.9
+
