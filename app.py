@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
 import requests
+import altair as alt
 from datetime import datetime
 #from db import add_book, get_all_books, update_book_metadata_full, delete_book
 from openlibrary import search_books, get_editions_for_work
@@ -695,6 +695,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
