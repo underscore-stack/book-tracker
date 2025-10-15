@@ -620,7 +620,7 @@ for b in filtered_books.to_dict(orient="records"):
             st.markdown(f"**Tags:** {tags}")
 
         with layout_right:
-            if cover_url.startswith("http"):
+            if isinstance(cover_url, str) and cover_url.startswith("http"):
                 st.markdown(
                     f'<div class="expanded-cover"><img src="{cover_url}" style="max-width: 80%; height: auto;"></div>',
                     unsafe_allow_html=True,
@@ -708,6 +708,7 @@ for b in filtered_books.to_dict(orient="records"):
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
