@@ -603,6 +603,91 @@ if not df.empty:
         st.error(f"Could not generate longest/shortest book table: {e}")
 
 
+# --- Grouped (accordion) library view ---
+
+from collections import defaultdict
+import datetime, os
+from covers_google import get_cached_or_drive_cover
+
+def group_books_by_year_month(books):
+    """Return {year: {month: [books]}} sorted newest-first."""
+    grouped = defaultdict(lambda: defaultdict(list))
+    for b in books:
+        try:
+            y, m = b["date_finished"].split("-")
+            grouped[int(y)][int(m)].append(b)
+        except Exception:
+            pass
+    # newest years first
+    return dict(sorted(grouped.items(), reverse=True))
+
+
+def render_book_row(b):
+    """Render one book row; covers load only when expander opened."""
+    cols = st.columns([1, 9, 1])
+
+    with cols[0]:
+        local_cover = get_cached_or_drive_cover({
+            "isbn": b.get("isbn", ""),
+            "cover_url": b.get("cover_url", "")
+        })
+        if local_cover and os.path.exists(local_cover):
+            st.image(local_cover, width=60)
+        else:
+            st.caption("No cover")
+
+    with cols[1]:
+        st.markdown(f"**{b.get('title','')}**")
+        st.caption(b.get('author',''))
+
+    with cols[2]:
+        if st.button("▶", key=f"expand_{b['id']}"):
+            st.session_state[f"expanded_{b['id']}"] = not st.session_state.get(f"expanded_{b['id']}", False)
+
+    if st.session_state.get(f"expanded_{b['id']}", False):
+        st.write(f"Publisher: {b.get('publisher','')}")
+        st.write(f"Pages: {b.get('pages','')}")
+        st.write(f"Genre: {b.get('genre','')}")
+        st.write(f"Author Gender: {b.get('author_gender','')}")
+        st.write(f"Fiction/Non-fiction: {b.get('fiction_nonfiction','')}")
+        st.write(f"Tags: {b.get('tags','')}")
+        st.write(f"Date Finished: {b.get('date_finished','')}")
+        st.write(f"ISBN: {b.get('isbn','')}")
+        st.write(f"OpenLibrary ID: {b.get('openlibrary_id','')}")
+        st.markdown("---")
+
+
+# --- Decide whether to show accordion or flat list ---
+filters_active = any([
+    st.session_state.get("search_query"),
+    st.session_state.get("selected_years"),
+    st.session_state.get("selected_months"),
+    st.session_state.get("fiction_filter"),
+    st.session_state.get("gender_filter"),
+    st.session_state.get("tag_filter")
+])
+
+if filters_active:
+    # Flat list view for search/filter mode
+    st.subheader(f"📚 Showing {len(filtered_books)} filtered result(s)")
+    for b in filtered_books:
+        render_book_row(b)
+
+else:
+    # Accordion view grouped by year/month
+    grouped = group_books_by_year_month(filtered_books)
+    now = datetime.datetime.now()
+    current_year, current_month = now.year, now.month
+
+    for year, months in grouped.items():
+        year_total = sum(len(v) for v in months.values())
+        with st.expander(f"📅 {year} ({year_total} books)", expanded=(year == current_year)):
+            for month, books_in_month in sorted(months.items(), reverse=True):
+                month_name = datetime.date(1900, month, 1).strftime("%B")
+                with st.expander(f"📖 {month_name} ({len(books_in_month)} books)",
+                                 expanded=(year == current_year and month == current_month)):
+                    for b in books_in_month:
+                        render_book_row(b)
 
 
 
@@ -761,6 +846,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
