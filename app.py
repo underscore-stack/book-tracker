@@ -656,7 +656,7 @@ for year in sorted(grouped.keys(), reverse=True):
         for month_code in sorted(grouped[year].keys(), reverse=True):
             month_books = grouped[year][month_code]
             month_name = months.get(month_code, month_code)
-            month_label = f"🗓️ {month_name} ({len(month_books)} book{'s' if len(month_books) != 1 else ''})"
+            month_label = f"{month_name} ({len(month_books)} book{'s' if len(month_books) != 1 else ''})"
         
             expanded_default = (
                 year == str(datetime.now().year)
@@ -664,27 +664,26 @@ for year in sorted(grouped.keys(), reverse=True):
             )
         
             open_key = f"month_open_{year}_{month_code}"
-            # Initialize state if missing
             if open_key not in st.session_state:
                 st.session_state[open_key] = expanded_default
         
-            # Draw the header row with a manual toggle button
-            cols = st.columns([0.95, 0.05])
-            with cols[0]:
-                st.markdown(f"### {month_label}")
-            with cols[1]:
-                if st.button("▶" if not st.session_state[open_key] else "▼",
+            # Inline expand/collapse row
+            row = st.columns([0.05, 0.95])
+            with row[0]:
+                if st.button("▼" if st.session_state[open_key] else "▶",
                              key=f"toggle_{open_key}",
                              help="Expand / collapse this month"):
                     st.session_state[open_key] = not st.session_state[open_key]
                     st.rerun()
+            with row[1]:
+                st.markdown(f"### {month_label}")
         
-            # --- Only render books if the month is open ---
+            # --- Only render books if this month is open ---
             if not st.session_state[open_key]:
-                st.caption("⏳ Expand this month to load books...")
+                st.divider()
                 continue
         
-            # --- Render the book list (lazy) ---
+            # --- Lazy-load book list ---
             for b in month_books:
                 book_id = b["id"]
                 if f"edit_{book_id}" not in st.session_state:
@@ -713,23 +712,20 @@ for year in sorted(grouped.keys(), reverse=True):
                     completed_date = date_str
         
                 cols = st.columns([1, 9, 1])
-        
                 with cols[0]:
                     local_cover = get_cached_cover(isbn, cover_url)
                     if local_cover and os.path.exists(local_cover):
                         st.image(local_cover, width=60)
                     else:
                         st.caption("No cover")
-        
                 with cols[1]:
                     st.markdown(f"<div class='book-title'>{title}</div>", unsafe_allow_html=True)
                     st.markdown(f"<div class='book-author'>{author}</div>", unsafe_allow_html=True)
-        
                 with cols[2]:
                     if st.button("▶", key=f"expand_{book_id}_{year}_{month_code}"):
                         st.session_state[f"expanded_{book_id}"] = not st.session_state[f"expanded_{book_id}"]
         
-                # --- Expanded book details ---
+                # Expanded book details
                 if st.session_state[f"expanded_{book_id}"]:
                     layout_left, layout_right = st.columns([2, 1])
                     with layout_left:
@@ -751,9 +747,6 @@ for year in sorted(grouped.keys(), reverse=True):
                         else:
                             st.caption("No cover available")
         
-                    # --- Edit / Delete actions remain the same ---
-                    # (your edit/delete/enrich logic follows here)
-
 
                         # Edit/Delete actions
                         if not st.session_state[f"edit_{book_id}"]:
@@ -834,6 +827,7 @@ for year in sorted(grouped.keys(), reverse=True):
                                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                                     st.session_state[f"edit_{book_id}"] = False
                                     st.rerun()
+
 
 
 
