@@ -321,7 +321,41 @@ st.markdown("""
 div[data-testid="stHorizontalBlock"] {
     margin-bottom: 0.15rem !important;
 }
+/* 1️⃣ Reduce button min-height & remove extra padding */
+button[kind="secondary"], div[data-testid="stHorizontalBlock"] button {
+    min-height: unset !important;
+    padding-top: 0.15rem !important;
+    padding-bottom: 0.15rem !important;
+    height: auto !important;
+}
 
+/* 2️⃣ Remove vertical gap ONLY for collapsed month titles */
+div[data-testid="stVerticalBlock"].st-emotion-cache-wfksaw:has(p.month-title) {
+    gap: 0 !important;
+}
+
+/* 3️⃣ Vertically center month titles next to arrows */
+.month-title {
+    display: flex;
+    align-items: center;       /* vertical centering */
+    height: 1.8rem;            /* matches reduced button height */
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    font-size: 1rem !important;
+    font-weight: 400 !important;
+    padding-left: 0.3rem;
+    color: #333;
+}
+
+/* 4️⃣ When expanded (month open), reapply small bottom margin for breathing room */
+div[data-testid="stVerticalBlock"].st-emotion-cache-wfksaw:has(div[data-testid="stImage"]) {
+    gap: 0.4rem !important;
+}
+
+/* 5️⃣ Fine-tune the overall vertical rhythm for book rows */
+div[data-testid="stHorizontalBlock"] {
+    margin-bottom: 0.15rem !important;
+}
 /* Shrink and align book rows */
 .book-title {
     font-size: 0.95rem !important;
@@ -873,6 +907,7 @@ for year in sorted(grouped.keys(), reverse=True):
                                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                                     st.session_state[f"edit_{book_id}"] = False
                                     st.rerun()
+
 
 
 
