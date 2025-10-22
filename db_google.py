@@ -12,13 +12,13 @@ SCOPES = [
 
 # --- AUTHENTICATION ---
 def _get_client():
-    # defer loading secrets until runtime
-    from streamlit.runtime.secrets import get_secret
+    import streamlit as st
     service_info = st.secrets.get("gcp_service_account")
     if not service_info:
         raise RuntimeError("❌ Missing [gcp_service_account] block in Streamlit secrets.")
     creds = SACreds.from_service_account_info(service_info, scopes=SCOPES)
     return gspread.authorize(creds)
+
 
 # --- CONFIG ---
 SHEET_NAME = "booktracker"
