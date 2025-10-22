@@ -637,6 +637,16 @@ else:
         year, month = b["date_finished"].split("-")
         grouped[year][month].append(b)
 
+# --- Cached cover lookup helper ---
+@st.cache_data(show_spinner=False)
+def get_cached_cover(isbn: str, cover_url: str):
+    """
+    Efficiently fetches or retrieves cached cover paths.
+    Uses Streamlit caching to prevent repeated downloads or disk scans.
+    """
+    from covers_google import get_cached_or_drive_cover
+    return get_cached_or_drive_cover({"isbn": isbn, "cover_url": cover_url})
+
     for year in sorted(grouped.keys(), reverse=True):
         year_total = sum(len(v) for v in grouped[year].values())
         with st.expander(f"📅 {year} ({year_total} book{'s' if year_total != 1 else ''})",
@@ -802,3 +812,4 @@ else:
                                         st.session_state.edit_message = f"Book '{new_title}' updated!"
                                         st.session_state[f"edit_{book_id}"] = False
                                         st.rerun()
+
