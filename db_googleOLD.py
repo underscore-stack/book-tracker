@@ -97,3 +97,4 @@ def delete_book(book_id: int):
         if str(r.get("id")) == str(book_id):
             ws.delete_rows(i)
             return
+
