@@ -11,6 +11,12 @@ from enrichment import enrich_book_metadata
 st.set_page_config(page_title="Book Tracker", layout="wide")
 st.title("📚 Book Tracker")
 
+try:
+    books = get_all_books()
+except Exception as e:
+    st.warning(f"⚠️ Could not load books yet: {e}")
+    books = []
+
 def extract_book_fields(book):
     """Safely extract isbn and cover_url from any book-like object."""
     def safe_get(obj, key):
@@ -755,6 +761,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
