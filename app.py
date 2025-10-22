@@ -647,169 +647,170 @@ def get_cached_cover(isbn: str, cover_url: str):
     from covers_google import get_cached_or_drive_cover
     return get_cached_or_drive_cover({"isbn": isbn, "cover_url": cover_url})
 
-    for year in sorted(grouped.keys(), reverse=True):
-        year_total = sum(len(v) for v in grouped[year].values())
-        with st.expander(f"📅 {year} ({year_total} book{'s' if year_total != 1 else ''})",
-                         expanded=(year == str(datetime.now().year))):
-    
-            # loop through months in reverse chronological order
-            for month_code in sorted(grouped[year].keys(), reverse=True):
-                month_books = grouped[year][month_code]
-                month_name = months.get(month_code, month_code)
-                month_label = f"🗓️ {month_name} ({len(month_books)} book{'s' if len(month_books) != 1 else ''})"
-    
-                # detect if current month is the current month of current year
-                expanded_default = (
-                    year == str(datetime.now().year)
-                    and month_code == datetime.now().strftime("%m")
-                )
-    
-                # render month expander
-                with st.expander(month_label, expanded=expanded_default):
-                    # only now do we loop through books → this is truly lazy
-                    for b in month_books:
-                        book_id = b["id"]
-                        if f"edit_{book_id}" not in st.session_state:
-                            st.session_state[f"edit_{book_id}"] = False
-                        if f"expanded_{book_id}" not in st.session_state:
-                            st.session_state[f"expanded_{book_id}"] = False
-    
-                        title = b.get("title", "")
-                        author = b.get("author", "")
-                        publisher = b.get("publisher", "")
-                        pub_year = b.get("pub_year", "")
-                        pages = b.get("pages", 0) or 0
-                        genre = b.get("genre", "")
-                        gender = b.get("author_gender", "")
-                        fiction = b.get("fiction_nonfiction", "")
-                        tags = b.get("tags", "")
-                        date_str = b.get("date_finished", "")
-                        cover_url = b.get("cover_url", "")
-                        openlibrary_id = b.get("openlibrary_id", "")
-                        isbn = b.get("isbn", "")
-                        word_count = b.get("word_count", "")
-    
-                        try:
-                            completed_date = datetime.strptime(date_str, "%Y-%m").strftime("%b-%Y")
-                        except:
-                            completed_date = date_str
-    
-                        cols = st.columns([1, 9, 1])
-    
-                        with cols[0]:
+for year in sorted(grouped.keys(), reverse=True):
+    year_total = sum(len(v) for v in grouped[year].values())
+    with st.expander(f"📅 {year} ({year_total} book{'s' if year_total != 1 else ''})",
+                     expanded=(year == str(datetime.now().year))):
+
+        # loop through months in reverse chronological order
+        for month_code in sorted(grouped[year].keys(), reverse=True):
+            month_books = grouped[year][month_code]
+            month_name = months.get(month_code, month_code)
+            month_label = f"🗓️ {month_name} ({len(month_books)} book{'s' if len(month_books) != 1 else ''})"
+
+            # detect if current month is the current month of current year
+            expanded_default = (
+                year == str(datetime.now().year)
+                and month_code == datetime.now().strftime("%m")
+            )
+
+            # render month expander
+            with st.expander(month_label, expanded=expanded_default):
+                # only now do we loop through books → this is truly lazy
+                for b in month_books:
+                    book_id = b["id"]
+                    if f"edit_{book_id}" not in st.session_state:
+                        st.session_state[f"edit_{book_id}"] = False
+                    if f"expanded_{book_id}" not in st.session_state:
+                        st.session_state[f"expanded_{book_id}"] = False
+
+                    title = b.get("title", "")
+                    author = b.get("author", "")
+                    publisher = b.get("publisher", "")
+                    pub_year = b.get("pub_year", "")
+                    pages = b.get("pages", 0) or 0
+                    genre = b.get("genre", "")
+                    gender = b.get("author_gender", "")
+                    fiction = b.get("fiction_nonfiction", "")
+                    tags = b.get("tags", "")
+                    date_str = b.get("date_finished", "")
+                    cover_url = b.get("cover_url", "")
+                    openlibrary_id = b.get("openlibrary_id", "")
+                    isbn = b.get("isbn", "")
+                    word_count = b.get("word_count", "")
+
+                    try:
+                        completed_date = datetime.strptime(date_str, "%Y-%m").strftime("%b-%Y")
+                    except:
+                        completed_date = date_str
+
+                    cols = st.columns([1, 9, 1])
+
+                    with cols[0]:
+                        local_cover = get_cached_cover(isbn, cover_url)
+                        if local_cover and os.path.exists(local_cover):
+                            st.image(local_cover, width=60)
+                        else:
+                            st.caption("No cover")
+
+                    with cols[1]:
+                        st.markdown(f"<div class='book-title'>{title}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='book-author'>{author}</div>", unsafe_allow_html=True)
+
+                    with cols[2]:
+                        if st.button("▶", key=f"expand_{book_id}_{year}_{month_code}"):
+                            st.session_state[f"expanded_{book_id}"] = not st.session_state[f"expanded_{book_id}"]
+
+                    # Expanded book details
+                    if st.session_state[f"expanded_{book_id}"]:
+                        layout_left, layout_right = st.columns([2, 1])
+                        with layout_left:
+                            st.markdown(f"**Completed date:** {completed_date}")
+                            st.markdown(f"**Type:** {fiction}")
+                            st.markdown(f"**Genre:** {genre}")
+                            st.markdown(f"**Author Gender:** {gender}")
+                            st.markdown(f"**Pages:** {pages}")
+                            st.markdown(f"**Length (est.):** {word_count or '—'} words")
+                            st.markdown(f"**Publisher:** {publisher}")
+                            st.markdown(f"**ISBN:** {isbn}")
+                            st.markdown(f"**OpenLibrary ID:** {openlibrary_id}")
+                            st.markdown(f"**Tags:** {tags}")
+
+                        with layout_right:
                             local_cover = get_cached_cover(isbn, cover_url)
                             if local_cover and os.path.exists(local_cover):
-                                st.image(local_cover, width=60)
+                                st.image(local_cover, use_container_width=True)
                             else:
-                                st.caption("No cover")
-    
-                        with cols[1]:
-                            st.markdown(f"<div class='book-title'>{title}</div>", unsafe_allow_html=True)
-                            st.markdown(f"<div class='book-author'>{author}</div>", unsafe_allow_html=True)
-    
-                        with cols[2]:
-                            if st.button("▶", key=f"expand_{book_id}_{year}_{month_code}"):
-                                st.session_state[f"expanded_{book_id}"] = not st.session_state[f"expanded_{book_id}"]
-    
-                        # Expanded book details
-                        if st.session_state[f"expanded_{book_id}"]:
-                            layout_left, layout_right = st.columns([2, 1])
-                            with layout_left:
-                                st.markdown(f"**Completed date:** {completed_date}")
-                                st.markdown(f"**Type:** {fiction}")
-                                st.markdown(f"**Genre:** {genre}")
-                                st.markdown(f"**Author Gender:** {gender}")
-                                st.markdown(f"**Pages:** {pages}")
-                                st.markdown(f"**Length (est.):** {word_count or '—'} words")
-                                st.markdown(f"**Publisher:** {publisher}")
-                                st.markdown(f"**ISBN:** {isbn}")
-                                st.markdown(f"**OpenLibrary ID:** {openlibrary_id}")
-                                st.markdown(f"**Tags:** {tags}")
-    
-                            with layout_right:
-                                local_cover = get_cached_cover(isbn, cover_url)
-                                if local_cover and os.path.exists(local_cover):
-                                    st.image(local_cover, use_container_width=True)
-                                else:
-                                    st.caption("No cover available")
-    
-                            # Edit/Delete actions
-                            if not st.session_state[f"edit_{book_id}"]:
-                                col1, col2 = st.columns([1, 1])
-                                with col1:
-                                    if st.button("✏️ Edit Book", key=f"edit_btn_{book_id}_{year}_{month_code}"):
-                                        st.session_state[f"edit_{book_id}"] = True
-                                with col2:
-                                    if st.button("🗑️ Delete Book", key=f"delete_{book_id}_{year}_{month_code}"):
-                                        delete_book(book_id)
-                                        st.session_state.deleted_message = f"Book '{title}' deleted"
+                                st.caption("No cover available")
+
+                        # Edit/Delete actions
+                        if not st.session_state[f"edit_{book_id}"]:
+                            col1, col2 = st.columns([1, 1])
+                            with col1:
+                                if st.button("✏️ Edit Book", key=f"edit_btn_{book_id}_{year}_{month_code}"):
+                                    st.session_state[f"edit_{book_id}"] = True
+                            with col2:
+                                if st.button("🗑️ Delete Book", key=f"delete_{book_id}_{year}_{month_code}"):
+                                    delete_book(book_id)
+                                    st.session_state.deleted_message = f"Book '{title}' deleted"
+                                    st.rerun()
+
+                        if st.session_state[f"edit_{book_id}"]:
+                            with st.form(key=f"edit_form_{book_id}_{year}_{month_code}"):
+                                meta = st.session_state.get(f"edit_enriched_{book_id}", {})
+
+                                new_title = st.text_input("Title", value=title)
+                                new_author = st.text_input("Author", value=author)
+                                new_publisher = st.text_input("Publisher", value=meta.get("publisher", publisher))
+                                new_pub_year = st.text_input("Publication Year", value=str(meta.get("pub_year", pub_year or "")))
+                                new_pages = st.number_input("Pages", min_value=0, value=meta.get("pages", pages or 0), step=1)
+                                new_genre = st.text_input("Genre", value=meta.get("genre", genre))
+
+                                gender_options = ["", "Male", "Female", "Nonbinary", "Multiple", "Unknown"]
+                                gender_index = gender_options.index(meta.get("author_gender", gender)) if meta.get("author_gender", gender) in gender_options else 0
+                                new_gender = st.selectbox("Author Gender", gender_options, index=gender_index)
+
+                                fiction_options = ["", "Fiction", "Non-fiction"]
+                                fiction_index = fiction_options.index(meta.get("fiction_nonfiction", fiction)) if meta.get("fiction_nonfiction", fiction) in fiction_options else 0
+                                new_fiction = st.selectbox("Fiction or Non-fiction", fiction_options, index=fiction_index)
+
+                                new_tags = st.text_input("Tags (comma-separated)", value=", ".join(meta.get("tags", tags.split(",") if tags else [])))
+                                new_date = st.date_input("Date Finished", value=datetime.strptime(date_str, "%Y-%m"))
+                                new_isbn = st.text_input("ISBN", value=isbn)
+                                new_olid = st.text_input("OpenLibrary ID", value=openlibrary_id)
+
+                                submitted = st.form_submit_button("💾 Update Book")
+                                enrich_clicked = st.form_submit_button("🔍 Enrich Metadata")
+
+                                if enrich_clicked:
+                                    existing = {
+                                        "publisher": new_publisher,
+                                        "pub_year": new_pub_year,
+                                        "pages": new_pages,
+                                        "genre": new_genre,
+                                        "fiction_nonfiction": new_fiction,
+                                        "author_gender": new_gender,
+                                        "tags": [t.strip() for t in new_tags.split(",") if t.strip()],
+                                        "isbn": new_isbn,
+                                        "cover_url": cover_url
+                                    }
+
+                                    enriched = enrich_book_metadata(title, author, isbn, existing=existing)
+
+                                    if "error" in enriched:
+                                        st.warning(f"Enrichment failed: {enriched['error']}")
+                                    else:
+                                        st.session_state[f"edit_enriched_{book_id}"] = enriched
                                         st.rerun()
-    
-                            if st.session_state[f"edit_{book_id}"]:
-                                with st.form(key=f"edit_form_{book_id}_{year}_{month_code}"):
-                                    meta = st.session_state.get(f"edit_enriched_{book_id}", {})
-    
-                                    new_title = st.text_input("Title", value=title)
-                                    new_author = st.text_input("Author", value=author)
-                                    new_publisher = st.text_input("Publisher", value=meta.get("publisher", publisher))
-                                    new_pub_year = st.text_input("Publication Year", value=str(meta.get("pub_year", pub_year or "")))
-                                    new_pages = st.number_input("Pages", min_value=0, value=meta.get("pages", pages or 0), step=1)
-                                    new_genre = st.text_input("Genre", value=meta.get("genre", genre))
-    
-                                    gender_options = ["", "Male", "Female", "Nonbinary", "Multiple", "Unknown"]
-                                    gender_index = gender_options.index(meta.get("author_gender", gender)) if meta.get("author_gender", gender) in gender_options else 0
-                                    new_gender = st.selectbox("Author Gender", gender_options, index=gender_index)
-    
-                                    fiction_options = ["", "Fiction", "Non-fiction"]
-                                    fiction_index = fiction_options.index(meta.get("fiction_nonfiction", fiction)) if meta.get("fiction_nonfiction", fiction) in fiction_options else 0
-                                    new_fiction = st.selectbox("Fiction or Non-fiction", fiction_options, index=fiction_index)
-    
-                                    new_tags = st.text_input("Tags (comma-separated)", value=", ".join(meta.get("tags", tags.split(",") if tags else [])))
-                                    new_date = st.date_input("Date Finished", value=datetime.strptime(date_str, "%Y-%m"))
-                                    new_isbn = st.text_input("ISBN", value=isbn)
-                                    new_olid = st.text_input("OpenLibrary ID", value=openlibrary_id)
-    
-                                    submitted = st.form_submit_button("💾 Update Book")
-                                    enrich_clicked = st.form_submit_button("🔍 Enrich Metadata")
-    
-                                    if enrich_clicked:
-                                        existing = {
-                                            "publisher": new_publisher,
-                                            "pub_year": new_pub_year,
-                                            "pages": new_pages,
-                                            "genre": new_genre,
-                                            "fiction_nonfiction": new_fiction,
-                                            "author_gender": new_gender,
-                                            "tags": [t.strip() for t in new_tags.split(",") if t.strip()],
-                                            "isbn": new_isbn,
-                                            "cover_url": cover_url
-                                        }
-    
-                                        enriched = enrich_book_metadata(title, author, isbn, existing=existing)
-    
-                                        if "error" in enriched:
-                                            st.warning(f"Enrichment failed: {enriched['error']}")
-                                        else:
-                                            st.session_state[f"edit_enriched_{book_id}"] = enriched
-                                            st.rerun()
-    
-                                    if submitted:
-                                        update_book_metadata_full(
-                                            book_id,
-                                            new_title,
-                                            new_author,
-                                            new_publisher,
-                                            int(new_pub_year) if new_pub_year else None,
-                                            int(new_pages) if new_pages else None,
-                                            new_genre,
-                                            new_gender,
-                                            new_fiction,
-                                            new_tags,
-                                            new_date.strftime("%Y-%m"),
-                                            new_isbn,
-                                            new_olid
-                                        )
-                                        st.session_state.edit_message = f"Book '{new_title}' updated!"
-                                        st.session_state[f"edit_{book_id}"] = False
-                                        st.rerun()
+
+                                if submitted:
+                                    update_book_metadata_full(
+                                        book_id,
+                                        new_title,
+                                        new_author,
+                                        new_publisher,
+                                        int(new_pub_year) if new_pub_year else None,
+                                        int(new_pages) if new_pages else None,
+                                        new_genre,
+                                        new_gender,
+                                        new_fiction,
+                                        new_tags,
+                                        new_date.strftime("%Y-%m"),
+                                        new_isbn,
+                                        new_olid
+                                    )
+                                    st.session_state.edit_message = f"Book '{new_title}' updated!"
+                                    st.session_state[f"edit_{book_id}"] = False
+                                    st.rerun()
+
 
