@@ -1,4 +1,6 @@
 import gspread
+import os
+import json
 from google.oauth2.service_account import Credentials as SACreds
 import streamlit as st
 
@@ -10,9 +12,12 @@ SCOPES = [
 
 # --- AUTHENTICATION ---
 def _get_client():
-    creds = SACreds.from_service_account_info(
-        st.secrets["gcp_service_account"], scopes=SCOPES
-    )
+    # defer loading secrets until runtime
+    from streamlit.runtime.secrets import get_secret
+    service_info = st.secrets.get("gcp_service_account")
+    if not service_info:
+        raise RuntimeError("❌ Missing [gcp_service_account] block in Streamlit secrets.")
+    creds = SACreds.from_service_account_info(service_info, scopes=SCOPES)
     return gspread.authorize(creds)
 
 # --- CONFIG ---
