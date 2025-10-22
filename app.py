@@ -357,6 +357,9 @@ st.markdown("""
     text-align: center;
     white-space: nowrap;
 }
+/size of expanded view cover
+.library-container dic
+
 /* Target the middle column in 3-column horizontal blocks */
 .library-container div[data-testid="stHorizontalBlock"] > div.stColumn:nth-child(2) {
     flex: 1 1 50% !important;     /* width ratio */
@@ -630,9 +633,9 @@ for b in filtered_books:
 
     with cols[0]:
         local_cover = get_cached_or_drive_cover({
-            "isbn": book.get("isbn", "") if "book" in locals() else isbn,
-            "cover_url": cover_url
-        })        
+            "isbn": b.get("isbn", ""),
+            "cover_url": b.get("cover_url", "")
+        })
         if local_cover and os.path.exists(local_cover):
             st.image(local_cover, width=60)
         else:
@@ -752,6 +755,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
