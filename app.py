@@ -357,8 +357,8 @@ st.markdown("""
     text-align: center;
     white-space: nowrap;
 }
-/size of expanded view cover
-.library-container dic
+/*size of expanded view cover
+/*.library-container dic
 
 /* Target the middle column in 3-column horizontal blocks */
 .library-container div[data-testid="stHorizontalBlock"] > div.stColumn:nth-child(2) {
@@ -755,6 +755,7 @@ for b in filtered_books:
                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                     st.session_state[f"edit_{book_id}"] = False
                     st.rerun()
+
 
 
 
