@@ -28,15 +28,18 @@ HEADERS = [
     "date_finished", "cover_url", "openlibrary_id", "isbn", "word_count"
 ]
 
+# Put your real sheet ID here (the long string from its URL)
+SHEET_ID = "1nnYvuKRAew48h6xXPgmQXxxgPzCjHMFiQwfBh0uQk7A"
+
 def _get_sheet():
+    """Open the existing Google Sheet by ID (shared with the service account)."""
     gc = _get_client()
     try:
-        sh = gc.open(SHEET_NAME)
-    except gspread.SpreadsheetNotFound:
-        sh = gc.create(SHEET_NAME)
-        sh.share(st.secrets["gcp_service_account"]["client_email"], perm_type="user", role="writer")
-        sh.sheet1.append_row(HEADERS)
+        sh = gc.open_by_key(SHEET_ID)
+    except Exception as e:
+        raise RuntimeError(f"⚠️ Could not open Google Sheet: {e}")
     return sh.sheet1
+
 
 
 # --- CRUD FUNCTIONS ---
