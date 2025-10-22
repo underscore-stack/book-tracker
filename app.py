@@ -307,6 +307,37 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("""
 <style>
+/* Month titles: plain text, same scale as year headings */
+.month-title {
+    font-size: 1.05rem !important;
+    font-weight: 500;
+    margin-top: 0.1rem !important;
+    margin-bottom: 0rem !important;
+    padding-left: 0.25rem;
+    color: #333;
+}
+
+/* Tighten column block spacing */
+div[data-testid="stHorizontalBlock"] {
+    margin-bottom: 0.15rem !important;
+}
+
+/* Shrink and align book rows */
+.book-title {
+    font-size: 0.95rem !important;
+    line-height: 1.2 !important;
+}
+.book-author {
+    font-size: 0.85rem !important;
+    color: #666 !important;
+    line-height: 1.1 !important;
+}
+
+/* Shrink the image cell padding */
+div[data-testid="stImage"] {
+    margin-top: 0.15rem !important;
+    margin-bottom: 0.15rem !important;
+}
 /* Match month headers to year headers */
 h4 {
     font-size: 1.1rem !important;
@@ -677,25 +708,28 @@ for year in sorted(grouped.keys(), reverse=True):
             if open_key not in st.session_state:
                 st.session_state[open_key] = expanded_default
         
-            # --- Inline month header (arrow + title) ---
-            row = st.columns([0.05, 0.95])
-            with row[0]:
+            # --- Inline compact month header ---
+            cols = st.columns([0.04, 0.96])
+            with cols[0]:
                 arrow = "▼" if st.session_state[open_key] else "▶"
                 if st.button(arrow, key=f"toggle_{open_key}", help="Expand / collapse this month"):
                     st.session_state[open_key] = not st.session_state[open_key]
                     st.rerun()
-            with row[1]:
-                st.markdown(f"#### {month_label}")  # smaller heading (same as year)
+            with cols[1]:
+                st.markdown(
+                    f"<p class='month-title'>{month_label}</p>",
+                    unsafe_allow_html=True
+                )
         
-            # tighten up spacing
-            st.markdown("<div style='margin-top:-10px;'></div>", unsafe_allow_html=True)
+            # minimal spacing after header
+            st.markdown("<div style='margin-top:-6px;'></div>", unsafe_allow_html=True)
         
             # --- Only render books if this month is open ---
             if not st.session_state[open_key]:
-                st.divider()
+                st.markdown("<hr style='margin:4px 0;'>", unsafe_allow_html=True)
                 continue
         
-            # --- Lazy-load books when open ---
+            # --- Lazy-load book list when open ---
             for b in month_books:
                 book_id = b["id"]
                 if f"edit_{book_id}" not in st.session_state:
@@ -727,14 +761,12 @@ for year in sorted(grouped.keys(), reverse=True):
                 with cols[0]:
                     local_cover = get_cached_cover(isbn, cover_url)
                     if local_cover and os.path.exists(local_cover):
-                        st.image(local_cover, width=60)
+                        st.image(local_cover, width=50)
                     else:
                         st.caption("No cover")
-        
                 with cols[1]:
                     st.markdown(f"<div class='book-title'>{title}</div>", unsafe_allow_html=True)
                     st.markdown(f"<div class='book-author'>{author}</div>", unsafe_allow_html=True)
-        
                 with cols[2]:
                     if st.button("▶", key=f"expand_{book_id}_{year}_{month_code}"):
                         st.session_state[f"expanded_{book_id}"] = not st.session_state[f"expanded_{book_id}"]
@@ -761,7 +793,7 @@ for year in sorted(grouped.keys(), reverse=True):
                         else:
                             st.caption("No cover available")
         
-                    # --- Edit / Delete buttons (same logic as before) ---
+                    # --- Edit/Delete buttons ---
                     col1, col2 = st.columns([1, 1])
                     with col1:
                         if st.button("✏️ Edit Book", key=f"edit_btn_{book_id}_{year}_{month_code}"):
@@ -771,6 +803,7 @@ for year in sorted(grouped.keys(), reverse=True):
                             delete_book(book_id)
                             st.session_state.deleted_message = f"Book '{title}' deleted"
                             st.rerun()
+
 
 
                         if st.session_state[f"edit_{book_id}"]:
@@ -840,6 +873,7 @@ for year in sorted(grouped.keys(), reverse=True):
                                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                                     st.session_state[f"edit_{book_id}"] = False
                                     st.rerun()
+
 
 
 
