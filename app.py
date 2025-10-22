@@ -658,32 +658,35 @@ for year in sorted(grouped.keys(), reverse=True):
             month_name = months.get(month_code, month_code)
             month_label = f"{month_name} ({len(month_books)} book{'s' if len(month_books) != 1 else ''})"
         
+            # Default open for current month/year
             expanded_default = (
                 year == str(datetime.now().year)
                 and month_code == datetime.now().strftime("%m")
             )
         
-            open_key = f"month_open_{year}_{month_code}"
-            if open_key not in st.session_state:
-                st.session_state[open_key] = expanded_default
+            toggle_key = f"month_open_{year}_{month_code}"
+            if toggle_key not in st.session_state:
+                st.session_state[toggle_key] = expanded_default
         
-            # Inline expand/collapse row
-            row = st.columns([0.05, 0.95])
-            with row[0]:
-                if st.button("▼" if st.session_state[open_key] else "▶",
-                             key=f"toggle_{open_key}",
-                             help="Expand / collapse this month"):
-                    st.session_state[open_key] = not st.session_state[open_key]
-                    st.rerun()
-            with row[1]:
-                st.markdown(f"### {month_label}")
+            # Inline header row
+            cols = st.columns([0.05, 0.95])
+            with cols[0]:
+                st.session_state[toggle_key] = st.toggle(
+                    " ", 
+                    value=st.session_state[toggle_key],
+                    key=f"toggle_{toggle_key}",
+                    label_visibility="collapsed"
+                )
+            with cols[1]:
+                symbol = "▼" if st.session_state[toggle_key] else "▶"
+                st.markdown(f"### {symbol} {month_label}")
         
             # --- Only render books if this month is open ---
-            if not st.session_state[open_key]:
+            if not st.session_state[toggle_key]:
                 st.divider()
                 continue
         
-            # --- Lazy-load book list ---
+            # --- Lazy-load book list only when expanded ---
             for b in month_books:
                 book_id = b["id"]
                 if f"edit_{book_id}" not in st.session_state:
@@ -718,14 +721,20 @@ for year in sorted(grouped.keys(), reverse=True):
                         st.image(local_cover, width=60)
                     else:
                         st.caption("No cover")
+        
                 with cols[1]:
                     st.markdown(f"<div class='book-title'>{title}</div>", unsafe_allow_html=True)
                     st.markdown(f"<div class='book-author'>{author}</div>", unsafe_allow_html=True)
-                with cols[2]:
-                    if st.button("▶", key=f"expand_{book_id}_{year}_{month_code}"):
-                        st.session_state[f"expanded_{book_id}"] = not st.session_state[f"expanded_{book_id}"]
         
-                # Expanded book details
+                with cols[2]:
+                    st.session_state[f"expanded_{book_id}"] = st.toggle(
+                        " ", 
+                        value=st.session_state[f"expanded_{book_id}"],
+                        key=f"toggle_expand_{book_id}_{year}_{month_code}",
+                        label_visibility="collapsed"
+                    )
+        
+                # --- Expanded book details ---
                 if st.session_state[f"expanded_{book_id}"]:
                     layout_left, layout_right = st.columns([2, 1])
                     with layout_left:
@@ -748,17 +757,16 @@ for year in sorted(grouped.keys(), reverse=True):
                             st.caption("No cover available")
         
 
-                        # Edit/Delete actions
-                        if not st.session_state[f"edit_{book_id}"]:
-                            col1, col2 = st.columns([1, 1])
-                            with col1:
-                                if st.button("✏️ Edit Book", key=f"edit_btn_{book_id}_{year}_{month_code}"):
-                                    st.session_state[f"edit_{book_id}"] = True
-                            with col2:
-                                if st.button("🗑️ Delete Book", key=f"delete_{book_id}_{year}_{month_code}"):
-                                    delete_book(book_id)
-                                    st.session_state.deleted_message = f"Book '{title}' deleted"
-                                    st.rerun()
+                        # --- Edit/Delete buttons (same as before) ---
+                        col1, col2 = st.columns([1, 1])
+                        with col1:
+                            if st.button("✏️ Edit Book", key=f"edit_btn_{book_id}_{year}_{month_code}"):
+                                st.session_state[f"edit_{book_id}"] = True
+                        with col2:
+                            if st.button("🗑️ Delete Book", key=f"delete_{book_id}_{year}_{month_code}"):
+                                delete_book(book_id)
+                                st.session_state.deleted_message = f"Book '{title}' deleted"
+                                st.rerun()
 
                         if st.session_state[f"edit_{book_id}"]:
                             with st.form(key=f"edit_form_{book_id}_{year}_{month_code}"):
@@ -827,6 +835,7 @@ for year in sorted(grouped.keys(), reverse=True):
                                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                                     st.session_state[f"edit_{book_id}"] = False
                                     st.rerun()
+
 
 
 
