@@ -658,96 +658,102 @@ for year in sorted(grouped.keys(), reverse=True):
             month_name = months.get(month_code, month_code)
             month_label = f"🗓️ {month_name} ({len(month_books)} book{'s' if len(month_books) != 1 else ''})"
         
-            # Auto-expand only current month in current year
             expanded_default = (
                 year == str(datetime.now().year)
                 and month_code == datetime.now().strftime("%m")
             )
         
-            # Track open state manually (true lazy loading)
             open_key = f"month_open_{year}_{month_code}"
+            # Initialize state if missing
             if open_key not in st.session_state:
                 st.session_state[open_key] = expanded_default
         
-            # Render month expander header
-            with st.expander(month_label, expanded=st.session_state[open_key]) as exp:
-                # Detect if it just opened this run
-                if exp and not st.session_state[open_key]:
-                    st.session_state[open_key] = True
+            # Draw the header row with a manual toggle button
+            cols = st.columns([0.95, 0.05])
+            with cols[0]:
+                st.markdown(f"### {month_label}")
+            with cols[1]:
+                if st.button("▶" if not st.session_state[open_key] else "▼",
+                             key=f"toggle_{open_key}",
+                             help="Expand / collapse this month"):
+                    st.session_state[open_key] = not st.session_state[open_key]
                     st.rerun()
         
-                # Skip heavy rendering until the user actually opens this expander
-                if not st.session_state[open_key]:
-                    st.caption("⏳ Expand this month to load books...")
-                    continue
+            # --- Only render books if the month is open ---
+            if not st.session_state[open_key]:
+                st.caption("⏳ Expand this month to load books...")
+                continue
         
-                # --- Lazy content: only runs after expansion ---
-                for b in month_books:
-                    book_id = b["id"]
-                    if f"edit_{book_id}" not in st.session_state:
-                        st.session_state[f"edit_{book_id}"] = False
-                    if f"expanded_{book_id}" not in st.session_state:
-                        st.session_state[f"expanded_{book_id}"] = False
+            # --- Render the book list (lazy) ---
+            for b in month_books:
+                book_id = b["id"]
+                if f"edit_{book_id}" not in st.session_state:
+                    st.session_state[f"edit_{book_id}"] = False
+                if f"expanded_{book_id}" not in st.session_state:
+                    st.session_state[f"expanded_{book_id}"] = False
         
-                    title = b.get("title", "")
-                    author = b.get("author", "")
-                    publisher = b.get("publisher", "")
-                    pub_year = b.get("pub_year", "")
-                    pages = b.get("pages", 0) or 0
-                    genre = b.get("genre", "")
-                    gender = b.get("author_gender", "")
-                    fiction = b.get("fiction_nonfiction", "")
-                    tags = b.get("tags", "")
-                    date_str = b.get("date_finished", "")
-                    cover_url = b.get("cover_url", "")
-                    openlibrary_id = b.get("openlibrary_id", "")
-                    isbn = b.get("isbn", "")
-                    word_count = b.get("word_count", "")
+                title = b.get("title", "")
+                author = b.get("author", "")
+                publisher = b.get("publisher", "")
+                pub_year = b.get("pub_year", "")
+                pages = b.get("pages", 0) or 0
+                genre = b.get("genre", "")
+                gender = b.get("author_gender", "")
+                fiction = b.get("fiction_nonfiction", "")
+                tags = b.get("tags", "")
+                date_str = b.get("date_finished", "")
+                cover_url = b.get("cover_url", "")
+                openlibrary_id = b.get("openlibrary_id", "")
+                isbn = b.get("isbn", "")
+                word_count = b.get("word_count", "")
         
-                    try:
-                        completed_date = datetime.strptime(date_str, "%Y-%m").strftime("%b-%Y")
-                    except:
-                        completed_date = date_str
+                try:
+                    completed_date = datetime.strptime(date_str, "%Y-%m").strftime("%b-%Y")
+                except:
+                    completed_date = date_str
         
-                    cols = st.columns([1, 9, 1])
+                cols = st.columns([1, 9, 1])
         
-                    with cols[0]:
-                        # ⏱ Only fetch covers now — when visible
+                with cols[0]:
+                    local_cover = get_cached_cover(isbn, cover_url)
+                    if local_cover and os.path.exists(local_cover):
+                        st.image(local_cover, width=60)
+                    else:
+                        st.caption("No cover")
+        
+                with cols[1]:
+                    st.markdown(f"<div class='book-title'>{title}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='book-author'>{author}</div>", unsafe_allow_html=True)
+        
+                with cols[2]:
+                    if st.button("▶", key=f"expand_{book_id}_{year}_{month_code}"):
+                        st.session_state[f"expanded_{book_id}"] = not st.session_state[f"expanded_{book_id}"]
+        
+                # --- Expanded book details ---
+                if st.session_state[f"expanded_{book_id}"]:
+                    layout_left, layout_right = st.columns([2, 1])
+                    with layout_left:
+                        st.markdown(f"**Completed date:** {completed_date}")
+                        st.markdown(f"**Type:** {fiction}")
+                        st.markdown(f"**Genre:** {genre}")
+                        st.markdown(f"**Author Gender:** {gender}")
+                        st.markdown(f"**Pages:** {pages}")
+                        st.markdown(f"**Length (est.):** {word_count or '—'} words")
+                        st.markdown(f"**Publisher:** {publisher}")
+                        st.markdown(f"**ISBN:** {isbn}")
+                        st.markdown(f"**OpenLibrary ID:** {openlibrary_id}")
+                        st.markdown(f"**Tags:** {tags}")
+        
+                    with layout_right:
                         local_cover = get_cached_cover(isbn, cover_url)
                         if local_cover and os.path.exists(local_cover):
-                            st.image(local_cover, width=60)
+                            st.image(local_cover, use_container_width=True)
                         else:
-                            st.caption("No cover")
+                            st.caption("No cover available")
         
-                    with cols[1]:
-                        st.markdown(f"<div class='book-title'>{title}</div>", unsafe_allow_html=True)
-                        st.markdown(f"<div class='book-author'>{author}</div>", unsafe_allow_html=True)
-        
-                    with cols[2]:
-                        if st.button("▶", key=f"expand_{book_id}_{year}_{month_code}"):
-                            st.session_state[f"expanded_{book_id}"] = not st.session_state[f"expanded_{book_id}"]
+                    # --- Edit / Delete actions remain the same ---
+                    # (your edit/delete/enrich logic follows here)
 
-                    # Expanded book details
-                    if st.session_state[f"expanded_{book_id}"]:
-                        layout_left, layout_right = st.columns([2, 1])
-                        with layout_left:
-                            st.markdown(f"**Completed date:** {completed_date}")
-                            st.markdown(f"**Type:** {fiction}")
-                            st.markdown(f"**Genre:** {genre}")
-                            st.markdown(f"**Author Gender:** {gender}")
-                            st.markdown(f"**Pages:** {pages}")
-                            st.markdown(f"**Length (est.):** {word_count or '—'} words")
-                            st.markdown(f"**Publisher:** {publisher}")
-                            st.markdown(f"**ISBN:** {isbn}")
-                            st.markdown(f"**OpenLibrary ID:** {openlibrary_id}")
-                            st.markdown(f"**Tags:** {tags}")
-
-                        with layout_right:
-                            local_cover = get_cached_cover(isbn, cover_url)
-                            if local_cover and os.path.exists(local_cover):
-                                st.image(local_cover, use_container_width=True)
-                            else:
-                                st.caption("No cover available")
 
                         # Edit/Delete actions
                         if not st.session_state[f"edit_{book_id}"]:
@@ -828,6 +834,7 @@ for year in sorted(grouped.keys(), reverse=True):
                                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                                     st.session_state[f"edit_{book_id}"] = False
                                     st.rerun()
+
 
 
 
