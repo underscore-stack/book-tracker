@@ -49,7 +49,7 @@ def get_all_books():
     # ensure numeric word count
     for r in rows:
         r["word_count"] = int(r["word_count"]) if r.get("word_count") else None
-    return rows
+    return list(reverse(rows))
 
 def add_book(book):
     sheet = _get_sheet()
