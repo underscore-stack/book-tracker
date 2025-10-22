@@ -657,23 +657,38 @@ for year in sorted(grouped.keys(), reverse=True):
             month_books = grouped[year][month_code]
             month_name = months.get(month_code, month_code)
             month_label = f"🗓️ {month_name} ({len(month_books)} book{'s' if len(month_books) != 1 else ''})"
-
-            # detect if current month is the current month of current year
+        
+            # Auto-expand only current month in current year
             expanded_default = (
                 year == str(datetime.now().year)
                 and month_code == datetime.now().strftime("%m")
             )
-
-            # render month expander
-            with st.expander(month_label, expanded=expanded_default):
-                # only now do we loop through books → this is truly lazy
+        
+            # Track open state manually (true lazy loading)
+            open_key = f"month_open_{year}_{month_code}"
+            if open_key not in st.session_state:
+                st.session_state[open_key] = expanded_default
+        
+            # Render month expander header
+            with st.expander(month_label, expanded=st.session_state[open_key]) as exp:
+                # Detect if it just opened this run
+                if exp and not st.session_state[open_key]:
+                    st.session_state[open_key] = True
+                    st.rerun()
+        
+                # Skip heavy rendering until the user actually opens this expander
+                if not st.session_state[open_key]:
+                    st.caption("⏳ Expand this month to load books...")
+                    continue
+        
+                # --- Lazy content: only runs after expansion ---
                 for b in month_books:
                     book_id = b["id"]
                     if f"edit_{book_id}" not in st.session_state:
                         st.session_state[f"edit_{book_id}"] = False
                     if f"expanded_{book_id}" not in st.session_state:
                         st.session_state[f"expanded_{book_id}"] = False
-
+        
                     title = b.get("title", "")
                     author = b.get("author", "")
                     publisher = b.get("publisher", "")
@@ -688,25 +703,26 @@ for year in sorted(grouped.keys(), reverse=True):
                     openlibrary_id = b.get("openlibrary_id", "")
                     isbn = b.get("isbn", "")
                     word_count = b.get("word_count", "")
-
+        
                     try:
                         completed_date = datetime.strptime(date_str, "%Y-%m").strftime("%b-%Y")
                     except:
                         completed_date = date_str
-
+        
                     cols = st.columns([1, 9, 1])
-
+        
                     with cols[0]:
+                        # ⏱ Only fetch covers now — when visible
                         local_cover = get_cached_cover(isbn, cover_url)
                         if local_cover and os.path.exists(local_cover):
                             st.image(local_cover, width=60)
                         else:
                             st.caption("No cover")
-
+        
                     with cols[1]:
                         st.markdown(f"<div class='book-title'>{title}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='book-author'>{author}</div>", unsafe_allow_html=True)
-
+        
                     with cols[2]:
                         if st.button("▶", key=f"expand_{book_id}_{year}_{month_code}"):
                             st.session_state[f"expanded_{book_id}"] = not st.session_state[f"expanded_{book_id}"]
@@ -812,5 +828,6 @@ for year in sorted(grouped.keys(), reverse=True):
                                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                                     st.session_state[f"edit_{book_id}"] = False
                                     st.rerun()
+
 
 
