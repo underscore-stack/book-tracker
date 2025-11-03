@@ -1,5 +1,5 @@
 # openlibrary_local.py
-import requests
+import requests, json
 import os
 import re
 
@@ -7,6 +7,51 @@ COVERS_DIR = "covers"
 
 if not os.path.exists(COVERS_DIR):
     os.makedirs(COVERS_DIR)
+
+def fetch_editions_for_work_raw(olid: str, limit: int = 50, offset: int = 0, timeout: int = 12):
+    """
+    Return (url, status_code, raw_json_dict) without any filtering or normalization.
+    Useful for debugging why editions look odd.
+    """
+    if not olid:
+        return ("", None, {})
+    url = f"https://openlibrary.org/works/{olid}/editions.json?limit={limit}&offset={offset}"
+    try:
+        r = requests.get(url, timeout=timeout)
+        status = r.status_code
+        payload = r.json() if r.headers.get("content-type","").startswith("application/json") else {}
+        return (url, status, payload)
+    except Exception as e:
+        return (url, None, {"error": str(e)})
+
+
+def fetch_editions_for_work(olid: str, limit: int = 50, offset: int = 0, debug: bool = False):
+    """
+    Your normal normalized editions call, but if debug=True, include raw bits.
+    """
+    url = f"https://openlibrary.org/works/{olid}/editions.json?limit={limit}&offset={offset}"
+    try:
+        r = requests.get(url, timeout=12)
+        r.raise_for_status()
+        payload = r.json()
+        entries = payload.get("entries", [])
+    except Exception as e:
+        if debug:
+            return [], {"url": url, "error": str(e)}
+        return []
+
+    # ... your existing normalization/filtering here ...
+    # (keep your _is_english / _cover_from_edition helpers)
+
+    normalized = []
+    for ed in entries:
+        # build your normalized dicts (title, publisher, publish_date, isbn, cover_url, etc.)
+        # ...
+        pass  # <-- keep your existing code here
+
+    if debug:
+        return normalized, {"url": url, "status": r.status_code, "raw": payload}
+    return normalized
 
 def search_books(query):
     """
@@ -219,6 +264,7 @@ def fetch_editions_for_work(olid: str, limit: int = 25):
             "cover_url": _cover_from_edition(ed),   # never a 0-id URL
         })
     return out
+
 
 
 
