@@ -72,8 +72,11 @@ if query:
                         with st.container():
                             cols = st.columns([1, 4])
                             with cols[0]:
-                                if ed["cover_url"]:
-                                    st.image(ed["cover_url"], width=80)
+                                cu = ed.get("cover_url", "")
+                                if isinstance(cu, str) and cu.startswith("http"):
+                                    st.image(cu, width=80)
+                                else:
+                                    st.caption("No cover")
                             with cols[1]:
                                 st.markdown(f"**Publisher:** {ed['publisher']}")
                                 st.markdown(f"**Published:** {ed['publish_date']}")
@@ -139,8 +142,8 @@ if query:
 
                 # Cache or download cover if possible
                 local_cover = get_cached_or_drive_cover({
-                    "isbn": str(isbn_val).strip(),
-                    "cover_url": str(cover_src).strip()
+                    "isbn": book.get("isbn", ""),
+                    "cover_url": book.get("cover_url", "")
                 })
 
                 if local_cover and os.path.exists(local_cover):
@@ -164,8 +167,19 @@ if query:
                 fiction_options = ["", "Fiction", "Non-fiction"]
                 fiction = st.selectbox("Fiction or Non-fiction", fiction_options,
                     index=fiction_options.index(meta.get("fiction_nonfiction", "")) if meta.get("fiction_nonfiction", "") in fiction_options else 0)
-
-                tags = st.text_input("Tags (comma-separated)", value=", ".join(meta.get("tags", [])))
+  
+                raw_tags = meta.get("tags", [])
+                # normalize to list[str]
+                if raw_tags is None:
+                    raw_tags = []
+                elif isinstance(raw_tags, str):
+                    raw_tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
+                elif isinstance(raw_tags, (set, tuple)):
+                    raw_tags = list(raw_tags)
+                
+                tags_default = ", ".join([str(t) for t in raw_tags])
+                
+                tags = st.text_input("Tags (comma-separated)", value=tags_default)
                 date = st.date_input("Date Finished")
 
                 submitted = st.form_submit_button("Add this book")
@@ -916,6 +930,7 @@ for year in sorted(grouped.keys(), reverse=True):
                                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                                     st.session_state[f"edit_{book_id}"] = False
                                     st.rerun()
+
 
 
 
