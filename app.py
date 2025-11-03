@@ -73,7 +73,7 @@ if query:
                             cols = st.columns([1, 4])
                             with cols[0]:
                                 cu = ed.get("cover_url", "")
-                                if isinstance(cu, str) and cu.startswith("http"):
+                                if isinstance(cu, str) and cu.startswith("http") and "/b/id/0-" not in cu:
                                     st.image(cu, width=80)
                                 else:
                                     st.caption("No cover")
@@ -930,6 +930,7 @@ for year in sorted(grouped.keys(), reverse=True):
                                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                                     st.session_state[f"edit_{book_id}"] = False
                                     st.rerun()
+
 
 
 
