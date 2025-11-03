@@ -1,11 +1,6 @@
-streamlit
-pandas
-altair
-requests
-google-auth
-google-auth-oauthlib
-google-auth-httplib2
-google-api-python-client
-gspread
-openai
-python-dotenv
+streamlit==1.30.0
+requests==2.31.0
+Pillow==10.0.0
+python-dotenv==1.0.0
+# Add other dependencies used in the repo here, pinned to tested versions.
+# If you rely on SQLite builtin, no separate dependency is required.
