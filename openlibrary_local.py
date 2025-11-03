@@ -24,35 +24,6 @@ def fetch_editions_for_work_raw(olid: str, limit: int = 50, offset: int = 0, tim
     except Exception as e:
         return (url, None, {"error": str(e)})
 
-
-def fetch_editions_for_work(olid: str, limit: int = 50, offset: int = 0, debug: bool = False):
-    """
-    Your normal normalized editions call, but if debug=True, include raw bits.
-    """
-    url = f"https://openlibrary.org/works/{olid}/editions.json?limit={limit}&offset={offset}"
-    try:
-        r = requests.get(url, timeout=12)
-        r.raise_for_status()
-        payload = r.json()
-        entries = payload.get("entries", [])
-    except Exception as e:
-        if debug:
-            return [], {"url": url, "error": str(e)}
-        return []
-
-    # ... your existing normalization/filtering here ...
-    # (keep your _is_english / _cover_from_edition helpers)
-
-    normalized = []
-    for ed in entries:
-        # build your normalized dicts (title, publisher, publish_date, isbn, cover_url, etc.)
-        # ...
-        pass  # <-- keep your existing code here
-
-    if debug:
-        return normalized, {"url": url, "status": r.status_code, "raw": payload}
-    return normalized
-
 def search_books(query):
     """
     Search OpenLibrary for a title or author and return a list of simplified book dicts.
@@ -229,8 +200,21 @@ def _edition_olid(ed):
         return k[len("/books/"):]
     return ""
     
-def fetch_editions_for_work(olid: str, limit: int = 25):
-    import requests
+def fetch_editions_for_work(olid: str, limit: int = 50, offset: int = 0, debug: bool = False):
+    """
+    Your normal normalized editions call, but if debug=True, include raw bits.
+    """
+    url = f"https://openlibrary.org/works/{olid}/editions.json?limit={limit}&offset={offset}"
+    try:
+        r = requests.get(url, timeout=12)
+        r.raise_for_status()
+        payload = r.json()
+        entries = payload.get("entries", [])
+    except Exception as e:
+        if debug:
+            return [], {"url": url, "error": str(e)}
+        return []
+
     if not olid:
         return []
     url = f"https://openlibrary.org/works/{olid}/editions.json?limit={limit}"
@@ -263,7 +247,16 @@ def fetch_editions_for_work(olid: str, limit: int = 25):
             "isbn": _best_isbn(ed),
             "cover_url": _cover_from_edition(ed),   # never a 0-id URL
         })
-    return out
+    normalized = []
+    for ed in entries:
+        # build your normalized dicts (title, publisher, publish_date, isbn, cover_url, etc.)
+        # ...
+        pass  # <-- keep your existing code here
+
+    if debug:
+        return normalized, {"url": url, "status": r.status_code, "raw": payload}
+    return normalized
+
 
 
 
