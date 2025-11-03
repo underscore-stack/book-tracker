@@ -139,22 +139,47 @@ def _best_isbn(ed):
             return vals[0]
     return ""
 
-def _cover_from_edition(ed, isbn):
-    # 1) covers array
+def _cover_from_edition(ed):
+    """
+    Priority:
+      1) covers[] positive id → b/id/{id}-M.jpg
+      2) edition OLID        → b/olid/{OLID}-M.jpg  (very reliable)
+      3) first ISBN          → b/isbn/{isbn}-M.jpg
+      4) return "" (no cover)
+    Never return a URL if it would be '.../b/id/0-...'
+    """
+    # 1) explicit cover ids
     covers = ed.get("covers") or []
-    if covers:
-        return f"https://covers.openlibrary.org/b/id/{covers[0]}-M.jpg"
-    # 2) build from ISBN (if present)
+    if isinstance(covers, list) and covers:
+        try:
+            cid = int(covers[0])
+            if cid > 0:
+                return f"https://covers.openlibrary.org/b/id/{cid}-M.jpg"
+        except Exception:
+            pass
+
+    # 2) OLID (edition key)
+    olid = _edition_olid(ed)
+    if olid:
+        return f"https://covers.openlibrary.org/b/olid/{olid}-M.jpg"
+
+    # 3) ISBN
+    isbn = _best_isbn(ed)
     if isbn:
         return f"https://covers.openlibrary.org/b/isbn/{isbn}-M.jpg"
-    # 3) nothing
+
+    # 4) nothing
     return ""
 
+def _edition_olid(ed):
+    # ed["key"] looks like "/books/OL12345M"
+    k = ed.get("key", "")
+    if isinstance(k, str) and k.startswith("/books/"):
+        return k[len("/books/"):]
+    return ""
+    
 def fetch_editions_for_work(olid: str, limit: int = 25):
-    """
-    Fetch editions for a Work (OLID), filter to English where possible,
-    and normalize fields for the UI.
-    """
+    import requests
     if not olid:
         return []
     url = f"https://openlibrary.org/works/{olid}/editions.json?limit={limit}"
@@ -170,28 +195,24 @@ def fetch_editions_for_work(olid: str, limit: int = 25):
     for ed in entries:
         if not _is_english(ed.get("languages")):
             continue
-        isbn = _best_isbn(ed)
-        cover_url = _cover_from_edition(ed, isbn)
-        publish_date = ed.get("publish_date", "")
-        publish_year = None
-        if publish_date:
-            # try to coerce a 4-digit year if present
-            import re
-            m = re.search(r"\b(1[89]\d{2}|20\d{2})\b", publish_date)
-            if m:
-                publish_year = int(m.group(0))
+
+        # normalize publish year if present (best-effort)
+        publish_date = ed.get("publish_date", "") or ""
+        m = re.search(r"\b(1[89]\d{2}|20\d{2})\b", publish_date)
+        publish_year = int(m.group(0)) if m else None
 
         out.append({
-            "openlibrary_id": (ed.get("key", "") or "").replace("/books/", ""),
+            "openlibrary_id": _edition_olid(ed),
             "title": ed.get("title") or "",
             "author": ", ".join(a.get("name", "") for a in ed.get("authors", []) if isinstance(a, dict)) or "",
             "publisher": ", ".join(ed.get("publishers", [])) if isinstance(ed.get("publishers"), list) else (ed.get("publishers") or ""),
             "publish_date": publish_date,
             "publish_year": publish_year,
             "pages": ed.get("number_of_pages"),
-            "isbn": isbn,
-            "cover_url": cover_url,  # always a string ("" if missing)
+            "isbn": _best_isbn(ed),
+            "cover_url": _cover_from_edition(ed),   # never a 0-id URL
         })
     return out
+
 
 
