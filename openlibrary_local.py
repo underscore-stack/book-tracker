@@ -123,20 +123,26 @@ def fetch_detailed_metadata(olid=None, isbn=None):
 import requests
 
 def _is_english(lang_list):
-    # OpenLibrary languages are like {"key": "/languages/eng"}
+    # Accept missing language (lots of older recs), otherwise require ENG.
     if not lang_list:
-        return True  # keep if missing (many older editions)
+        return True
     for l in lang_list:
-        if isinstance(l, dict) and l.get("key", "").endswith("/eng"):
+        key = ""
+        if isinstance(l, dict):
+            key = l.get("key", "")
+        elif isinstance(l, str):
+            key = l
+        if key.endswith("/eng"):
             return True
     return False
 
 def _best_isbn(ed):
-    # Prefer 13, fall back to 10
     for key in ("isbn_13", "isbn_10"):
         vals = ed.get(key)
-        if isinstance(vals, list) and len(vals) > 0:
-            return vals[0]
+        if isinstance(vals, list) and vals:
+            return str(vals[0])
+        if isinstance(vals, str) and vals.strip():
+            return vals.strip()
     return ""
 
 def _cover_from_edition(ed):
@@ -213,6 +219,7 @@ def fetch_editions_for_work(olid: str, limit: int = 25):
             "cover_url": _cover_from_edition(ed),   # never a 0-id URL
         })
     return out
+
 
 
 
