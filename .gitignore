@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+env/
+venv/
+.venv/
+
+# Virtualenv and editor directories
+.Python
+/.env
+/.venv
+.idea/
+.vscode/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# SQLite DB and runtime files
+books.db
+*.db
+
+# Secrets
+token
+.env
+.env.*
+
+# Streamlit local state
+.streamlit/
+
+# macOS
+.DS_Store
+
+# Logs and coverage
+*.log
+.coverage
+htmlcov/
+
+# pip cache
+pip-wheel-metadata/
+
+# Jupyter
+.ipynb_checkpoints/
