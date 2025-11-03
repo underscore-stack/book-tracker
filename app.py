@@ -321,7 +321,7 @@ st.markdown("""
 div[data-testid="stHorizontalBlock"] {
     margin-bottom: 0.15rem !important;
 }
-/* 1️⃣ Reduce button min-height & remove extra padding */
+/* Reduce button min-height & remove extra padding */
 button[kind="secondary"], div[data-testid="stHorizontalBlock"] button {
     min-height: unset !important;
     padding-top: 0.15rem !important;
@@ -329,12 +329,21 @@ button[kind="secondary"], div[data-testid="stHorizontalBlock"] button {
     height: auto !important;
 }
 
-/* 2️⃣ Remove vertical gap ONLY for collapsed month titles */
+/* Affect all Streamlit images */
+[data-testid="stImage"] img,
+[data-testid="stImageContainer"] img {
+  max-width: 30% !important;   /* your desired scale */
+  width: auto !important;       /* override inline width: 1438px */
+  height: auto !important;      /* keep aspect ratio */
+}
+
+
+/* Remove vertical gap ONLY for collapsed month titles */
 div[data-testid="stVerticalBlock"].st-emotion-cache-wfksaw:has(p.month-title) {
     gap: 0 !important;
 }
 
-/* 3️⃣ Vertically center month titles next to arrows */
+/* Vertically center month titles next to arrows */
 .month-title {
     display: flex;
     align-items: center;       /* vertical centering */
@@ -347,12 +356,12 @@ div[data-testid="stVerticalBlock"].st-emotion-cache-wfksaw:has(p.month-title) {
     color: #333;
 }
 
-/* 4️⃣ When expanded (month open), reapply small bottom margin for breathing room */
+/* When expanded (month open), reapply small bottom margin for breathing room */
 div[data-testid="stVerticalBlock"].st-emotion-cache-wfksaw:has(div[data-testid="stImage"]) {
     gap: 0.4rem !important;
 }
 
-/* 5️⃣ Fine-tune the overall vertical rhythm for book rows */
+/* Fine-tune the overall vertical rhythm for book rows */
 div[data-testid="stHorizontalBlock"] {
     margin-bottom: 0.15rem !important;
 }
@@ -907,6 +916,7 @@ for year in sorted(grouped.keys(), reverse=True):
                                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                                     st.session_state[f"edit_{book_id}"] = False
                                     st.rerun()
+
 
 
 
