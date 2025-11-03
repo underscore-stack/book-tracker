@@ -120,62 +120,78 @@ def fetch_detailed_metadata(olid=None, isbn=None):
         "subjects": [s["name"] for s in data.get("subjects", [])],
     }
 
+import requests
 
-def fetch_editions_for_work(olid):
+def _is_english(lang_list):
+    # OpenLibrary languages are like {"key": "/languages/eng"}
+    if not lang_list:
+        return True  # keep if missing (many older editions)
+    for l in lang_list:
+        if isinstance(l, dict) and l.get("key", "").endswith("/eng"):
+            return True
+    return False
+
+def _best_isbn(ed):
+    # Prefer 13, fall back to 10
+    for key in ("isbn_13", "isbn_10"):
+        vals = ed.get(key)
+        if isinstance(vals, list) and len(vals) > 0:
+            return vals[0]
+    return ""
+
+def _cover_from_edition(ed, isbn):
+    # 1) covers array
+    covers = ed.get("covers") or []
+    if covers:
+        return f"https://covers.openlibrary.org/b/id/{covers[0]}-M.jpg"
+    # 2) build from ISBN (if present)
+    if isbn:
+        return f"https://covers.openlibrary.org/b/isbn/{isbn}-M.jpg"
+    # 3) nothing
+    return ""
+
+def fetch_editions_for_work(olid: str, limit: int = 25):
     """
-    Fetch up to 5 unique English-language editions for a given OpenLibrary work ID (OLID).
-    Returns a list of dicts with title, author, isbn, publish_date, publisher, cover_url, and openlibrary_id.
+    Fetch editions for a Work (OLID), filter to English where possible,
+    and normalize fields for the UI.
     """
     if not olid:
         return []
-
-    url = f"https://openlibrary.org/works/{olid}/editions.json?limit=50"
+    url = f"https://openlibrary.org/works/{olid}/editions.json?limit={limit}"
     try:
-        r = requests.get(url, timeout=10)
-        if r.status_code != 200:
-            print(f"⚠️ Editions request failed: {r.status_code}")
-            return []
-        data = r.json()
+        r = requests.get(url, timeout=12)
+        r.raise_for_status()
+        entries = r.json().get("entries", [])
     except Exception as e:
-        print(f"⚠️ Error fetching editions: {e}")
+        print(f"⚠️ editions fetch failed for {olid}: {e}")
         return []
 
-    editions = []
-    seen_isbns = set()  # ✅ avoid duplicates by ISBN
-
-    for e in data.get("entries", []):
-        isbn = ""
-        if "isbn_13" in e and e["isbn_13"]:
-            isbn = e["isbn_13"][0]
-        elif "isbn_10" in e and e["isbn_10"]:
-            isbn = e["isbn_10"][0]
-        if not isbn or isbn in seen_isbns:
+    out = []
+    for ed in entries:
+        if not _is_english(ed.get("languages")):
             continue
-        seen_isbns.add(isbn)
+        isbn = _best_isbn(ed)
+        cover_url = _cover_from_edition(ed, isbn)
+        publish_date = ed.get("publish_date", "")
+        publish_year = None
+        if publish_date:
+            # try to coerce a 4-digit year if present
+            import re
+            m = re.search(r"\b(1[89]\d{2}|20\d{2})\b", publish_date)
+            if m:
+                publish_year = int(m.group(0))
 
-        cover_url = ""
-        if e.get("covers"):
-            cover_url = f"https://covers.openlibrary.org/b/id/{e['covers'][0]}-M.jpg"
-
-        publisher = e.get("publishers", [""])[0] if e.get("publishers") else ""
-
-        editions.append({
-            "title": e.get("title", "(no title)"),
-            "author": ", ".join(a.get("name", "") for a in e.get("authors", [])) if e.get("authors") else "",
+        out.append({
+            "openlibrary_id": (ed.get("key", "") or "").replace("/books/", ""),
+            "title": ed.get("title") or "",
+            "author": ", ".join(a.get("name", "") for a in ed.get("authors", []) if isinstance(a, dict)) or "",
+            "publisher": ", ".join(ed.get("publishers", [])) if isinstance(ed.get("publishers"), list) else (ed.get("publishers") or ""),
+            "publish_date": publish_date,
+            "publish_year": publish_year,
+            "pages": ed.get("number_of_pages"),
             "isbn": isbn,
-            "publish_date": e.get("publish_date", "Unknown"),
-            "publisher": publisher,
-            "cover_url": cover_url,
-            # ✅ add openlibrary_id for UI
-            "openlibrary_id": e.get("key", "").replace("/books/", "")
+            "cover_url": cover_url,  # always a string ("" if missing)
         })
+    return out
 
-    # Sort oldest → newest by year
-    def parse_date(d):
-        import re
-        m = re.search(r"\d{4}", d or "")
-        return int(m.group(0)) if m else 9999
-
-    editions.sort(key=lambda e: parse_date(e["publish_date"]))
-    return editions[:5]
 
