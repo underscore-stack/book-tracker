@@ -4,7 +4,7 @@ import altair as alt
 import os
 from datetime import datetime
 from db_google import get_all_books, add_book, update_book_metadata_full, delete_book
-from openlibrary_local import search_books, fetch_detailed_metadata, fetch_editions_for_work 
+from openlibrary_local import search_books, fetch_detailed_metadata, fetch_editions_for_work, fetch_editions_for_work_raw
 from covers_google import save_cover_to_drive as save_cover, get_cached_or_drive_cover
 from enrichment import enrich_book_metadata
 
@@ -77,6 +77,32 @@ if query:
                                     st.image(cu, width=80)
                                 else:
                                     st.caption("No cover")
+                            with st.expander("View editions"):
+                                # DEBUG toggle
+                                dbg = st.checkbox("Show raw OpenLibrary response", value=False, key=f"dbg_{work_olid}")
+                            
+                                if dbg:
+                                    url, status, raw = fetch_editions_for_work_raw(work_olid, limit=50)
+                                    st.write("**Request URL:**", url)
+                                    st.write("**HTTP status:**", status)
+                                    st.json(raw)  # raw payload (includes 'entries')
+                            
+                                    # optional: let yourself download it for offline inspection
+                                    st.download_button(
+                                        "Download raw JSON",
+                                        data=json.dumps(raw, indent=2),
+                                        file_name=f"openlibrary_editions_{work_olid}.json",
+                                        mime="application/json",
+                                    )
+                            
+                                # Normal (filtered/normalized) editions for the UI
+                                ed_list, dbg_info = fetch_editions_for_work(work_olid, limit=50, debug=True)
+                                if dbg:
+                                    st.write("**Normalized fetch URL:**", dbg_info.get("url"))
+                                    st.write("**Normalized HTTP status:**", dbg_info.get("status"))
+                                    # If useful, you can also peek: st.json(dbg_info.get("raw", {}))
+                            
+                                # render your editions list from ed_list as you already do...
                             with cols[1]:
                                 st.markdown(f"**Publisher:** {ed['publisher']}")
                                 st.markdown(f"**Published:** {ed['publish_date']}")
@@ -930,6 +956,7 @@ for year in sorted(grouped.keys(), reverse=True):
                                     st.session_state.edit_message = f"Book '{new_title}' updated!"
                                     st.session_state[f"edit_{book_id}"] = False
                                     st.rerun()
+
 
 
 
