@@ -369,30 +369,48 @@ def _covers_from_work(wk_json: Dict[str, Any]) -> List[str]:
 # Thin wrappers used by app.py
 # ---------------------------
 
+# ---------------------------
+# Thin wrappers used by app.py
+# ---------------------------
+
 def search_books(query: str, author: str | None = None, limit: int = 10, debug: bool = False):
     """
-    app.py calls `search_books(query)` expecting a list of dicts with:
+    Return a LIST of search results (NOT a tuple) unless debug=True.
+    Each item must be a dict with keys app.py expects:
       title, author, openlibrary_id, cover_url, isbn
-    We wrap `search_works` and map fields accordingly.
     """
-    results, meta = search_works(title=query, author=author, limit=limit, debug=debug)
+    works = None
+    meta = None
+    try:
+        # search_works already exists in this file
+        if debug:
+            works, meta = search_works(title=query, author=author, limit=limit, debug=True)
+        else:
+            works = search_works(title=query, author=author, limit=limit, debug=False)
+    except Exception as exc:
+        # In debug mode, surface the exception; otherwise, fail quietly with empty list
+        if debug:
+            return [], {"error": str(exc)}
+        return []
+
+    # When debug=False, `works` is a list; when debug=True, `works` is already the list from above.
+    results_list = works if isinstance(works, list) else (works or [])
     mapped = []
-    for r in results:
+    for r in results_list:
         mapped.append({
             "title": r.get("title", ""),
             "author": r.get("author", ""),
-            # Keep the full '/works/OL...W' form; downstream code already handles it
-            "openlibrary_id": r.get("work_key", ""),
+            "openlibrary_id": r.get("work_key", ""),   # keep '/works/OL...W'
             "cover_url": r.get("cover_url", ""),
-            "isbn": "",  # Search results typically don't have a reliable ISBN
+            "isbn": "",  # search results rarely have reliable ISBN at this stage
         })
+
     return (mapped, meta) if debug else mapped
 
 
 def fetch_editions_for_work_raw(work_olid: str, limit: int = 50, timeout: int = 12):
     """
-    app.py’s debug panel expects (url, status, raw) for the editions call.
-    We reuse `fetch_editions_for_work(..., debug=True)` and extract meta.
+    Return exactly (url, status, raw) for the 'Show raw OpenLibrary response' debug UI.
     """
     _eds, meta = fetch_editions_for_work(
         work_olid,
@@ -402,6 +420,7 @@ def fetch_editions_for_work_raw(work_olid: str, limit: int = 50, timeout: int = 
     )
     meta = meta or {}
     return meta.get("url"), meta.get("status"), meta.get("raw")
+
 
 
 if __name__ == "__main__":
@@ -418,4 +437,5 @@ if __name__ == "__main__":
         print("First 3 editions:")
         for e in eds[:3]:
             print("  *", e["title"], "|", e.get("publisher"), "|", e.get("publish_year"), "|", e.get("isbn"))
+
 
