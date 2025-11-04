@@ -164,60 +164,49 @@ def search_works(
 # Editions for a work
 # ---------------------------
 
-def fetch_editions_for_work(
-    work_olid: str,
-    prefer_lang: Tuple[str, ...] = ("eng", "en"),
-    limit: int = 50,
-    fallback_to_all: bool = True,
-    timeout: int = 12,
-    debug: bool = False,
-) -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
+def fetch_editions_for_work(work_olid: str, limit: int = 50, timeout: int = 12, debug: bool = False):
     """
-    Fetch editions for a Work OLID (e.g. "OL12345W").
-    Returns (editions, meta_if_debug). Each edition:
-      {title, publisher, publish_date, publish_year, pages, isbn, cover_url, edition_key, languages}
-    - English editions preferred; if none, optionally returns unknown-language editions when fallback_to_all=True
-    - Sorted by: has cover, has ISBN, newest publish_year
-    - debug=True includes meta with 'url', 'status', 'raw'
+    Returns:
+      - when debug=False (default): LIST[dict] of editions
+      - when debug=True: (LIST[dict], meta)
+    Each edition dict should include keys app.py expects: cover_url, title, publisher, publish_date, pages, isbn, language, ol_edition_id
     """
-    work_olid = work_olid.replace("/works/", "").strip()
-    url = f"{OL_BASE}/works/{work_olid}/editions.json?limit={max(10, limit)}"
-    payload, meta = _http_get_json(url, timeout=timeout)
+    import requests
 
-    entries = (payload or {}).get("entries", []) if isinstance(payload, dict) else []
-    preferred: List[Dict[str, Any]] = []
-    unknown: List[Dict[str, Any]] = []
+    url = f"https://openlibrary.org{work_olid}/editions.json?limit={limit}"
+    meta = {"url": url, "status": None, "raw": None}
 
-    for ed in entries:
-        langs = [l.lower() for l in _extract_languages(ed)]
-        is_english = any(code in langs for code in prefer_lang) or ("english" in langs)
+    try:
+        resp = requests.get(url, timeout=timeout)
+        meta["status"] = resp.status_code
+        meta["raw"] = resp.text
+        resp.raise_for_status()
+        data = resp.json() or {}
+        docs = data.get("entries") or data.get("editions") or data.get("docs") or []
 
-        norm = {
-            "title": ed.get("title") or ed.get("full_title") or "",
-            "publisher": ", ".join(ed.get("publishers", [])) if isinstance(ed.get("publishers"), list)
-                         else (ed.get("publisher") or ""),
-            "publish_date": ed.get("publish_date") or "",
-            "publish_year": _to_int_year(ed.get("publish_date")),
-            "pages": ed.get("number_of_pages"),
-            "isbn": _first_isbn(ed),
-            "cover_url": _normalize_cover_from_entry(ed),
-            "edition_key": ed.get("key"),     # e.g. "/books/OL12345M"
-            "languages": langs or None,
-        }
+        editions = []
+        for d in docs:
+            # normalize a few common fields
+            cover_id = d.get("covers", [None])[0] if isinstance(d.get("covers"), list) else d.get("covers")
+            cover_url = f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg" if cover_id else ""
+            editions.append({
+                "title": d.get("title", ""),
+                "publisher": ", ".join(d.get("publishers", [])) if isinstance(d.get("publishers"), list) else (d.get("publisher") or ""),
+                "publish_date": d.get("publish_date", ""),
+                "pages": d.get("number_of_pages") or d.get("pagination") or "",
+                "isbn": (d.get("isbn_13", []) or d.get("isbn_10", []) or [""])[0] if isinstance(d.get("isbn_13", []), list) else d.get("isbn_13") or "",
+                "language": (d.get("languages", [{}])[0].get("key", "").split("/")[-1] if d.get("languages") else ""),
+                "ol_edition_id": d.get("key", ""),  # e.g. "/books/OL12345M"
+                "cover_url": cover_url,
+            })
 
-        if is_english:
-            preferred.append(norm)
-        elif not langs:
-            unknown.append(norm)
+    except Exception as exc:
+        # On network/parse error, return empty list (and meta if debug)
+        editions = []
+        meta["error"] = str(exc)
 
-    results = preferred if preferred else (unknown if fallback_to_all else [])
-    results.sort(key=lambda e: (
-        1 if e.get("cover_url") else 0,
-        1 if e.get("isbn") else 0,
-        e.get("publish_year") or 0
-    ), reverse=True)
+    return (editions, meta) if debug else editions
 
-    return (results[:limit], meta if debug else None)
 
 # ---------------------------
 # Detailed metadata for a single item
@@ -446,6 +435,7 @@ if __name__ == "__main__":
         print("First 3 editions:")
         for e in eds[:3]:
             print("  *", e["title"], "|", e.get("publisher"), "|", e.get("publish_year"), "|", e.get("isbn"))
+
 
 
 
