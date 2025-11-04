@@ -1,6 +1,6 @@
 streamlit==1.30.0
 requests==2.31.0
-Pillow==10.0.0
+Pillow>=9.5.0,<11
 python-dotenv==1.0.0
 # Add other dependencies used in the repo here, pinned to tested versions.
 # If you rely on SQLite builtin, no separate dependency is required.
