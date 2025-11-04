@@ -369,43 +369,52 @@ def _covers_from_work(wk_json: Dict[str, Any]) -> List[str]:
 # Thin wrappers used by app.py
 # ---------------------------
 
-# ---------------------------
-# Thin wrappers used by app.py
-# ---------------------------
-
 def search_books(query: str, author: str | None = None, limit: int = 10, debug: bool = False):
     """
-    Return a LIST of search results (NOT a tuple) unless debug=True.
-    Each item must be a dict with keys app.py expects:
-      title, author, openlibrary_id, cover_url, isbn
+    Returns:
+      - when debug=False: a LIST[dict] of results (title, author, openlibrary_id, cover_url, isbn)
+      - when debug=True:  (LIST[dict], meta)
+    This wrapper normalizes the shape even if search_works returns (list, meta) in non-debug mode.
     """
     works = None
     meta = None
+
     try:
-        # search_works already exists in this file
-        if debug:
-            works, meta = search_works(title=query, author=author, limit=limit, debug=True)
-        else:
-            works = search_works(title=query, author=author, limit=limit, debug=False)
+        works_out = search_works(title=query, author=author, limit=limit, debug=debug)
     except Exception as exc:
-        # In debug mode, surface the exception; otherwise, fail quietly with empty list
         if debug:
             return [], {"error": str(exc)}
         return []
 
-    # When debug=False, `works` is a list; when debug=True, `works` is already the list from above.
-    results_list = works if isinstance(works, list) else (works or [])
+    # --- Normalize outputs from search_works ---
+    # It may return either:
+    #   - list_of_dicts
+    #   - (list_of_dicts, meta)   <-- sometimes even when debug=False, so unpack defensively
+    if isinstance(works_out, tuple) and len(works_out) == 2:
+        works, meta = works_out
+    else:
+        works = works_out
+        meta = None
+
+    # Guard against None
+    works = works or []
+
+    # Map into the shape app.py expects per item
     mapped = []
-    for r in results_list:
+    for r in works:
+        # r should already be a dict from search_works; if not, skip safely
+        if not isinstance(r, dict):
+            continue
         mapped.append({
             "title": r.get("title", ""),
             "author": r.get("author", ""),
             "openlibrary_id": r.get("work_key", ""),   # keep '/works/OL...W'
             "cover_url": r.get("cover_url", ""),
-            "isbn": "",  # search results rarely have reliable ISBN at this stage
+            "isbn": "",  # not reliable at the search stage
         })
 
     return (mapped, meta) if debug else mapped
+
 
 
 def fetch_editions_for_work_raw(work_olid: str, limit: int = 50, timeout: int = 12):
@@ -437,5 +446,6 @@ if __name__ == "__main__":
         print("First 3 editions:")
         for e in eds[:3]:
             print("  *", e["title"], "|", e.get("publisher"), "|", e.get("publish_year"), "|", e.get("isbn"))
+
 
 
