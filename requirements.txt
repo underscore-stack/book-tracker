@@ -4,5 +4,8 @@ Pillow>=9.5.0,<11
 python-dotenv==1.0.0
 gspread>=5.0.0
 google-auth>=2.17.3
+google-api-python-client>=2.90.0
+google-auth-httplib2>=0.1.0
+google-auth-oauthlib>=1.0.0
 # Add other dependencies used in the repo here, pinned to tested versions.
 # If you rely on SQLite builtin, no separate dependency is required.
