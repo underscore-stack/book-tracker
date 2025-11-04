@@ -366,8 +366,43 @@ def _covers_from_work(wk_json: Dict[str, Any]) -> List[str]:
     return out
 
 # ---------------------------
-# Handy demo / debugging usage
+# Thin wrappers used by app.py
 # ---------------------------
+
+def search_books(query: str, author: str | None = None, limit: int = 10, debug: bool = False):
+    """
+    app.py calls `search_books(query)` expecting a list of dicts with:
+      title, author, openlibrary_id, cover_url, isbn
+    We wrap `search_works` and map fields accordingly.
+    """
+    results, meta = search_works(title=query, author=author, limit=limit, debug=debug)
+    mapped = []
+    for r in results:
+        mapped.append({
+            "title": r.get("title", ""),
+            "author": r.get("author", ""),
+            # Keep the full '/works/OL...W' form; downstream code already handles it
+            "openlibrary_id": r.get("work_key", ""),
+            "cover_url": r.get("cover_url", ""),
+            "isbn": "",  # Search results typically don't have a reliable ISBN
+        })
+    return (mapped, meta) if debug else mapped
+
+
+def fetch_editions_for_work_raw(work_olid: str, limit: int = 50, timeout: int = 12):
+    """
+    app.py’s debug panel expects (url, status, raw) for the editions call.
+    We reuse `fetch_editions_for_work(..., debug=True)` and extract meta.
+    """
+    _eds, meta = fetch_editions_for_work(
+        work_olid,
+        limit=limit,
+        timeout=timeout,
+        debug=True
+    )
+    meta = meta or {}
+    return meta.get("url"), meta.get("status"), meta.get("raw")
+
 
 if __name__ == "__main__":
     # Simple quick test from CLI:
@@ -383,3 +418,4 @@ if __name__ == "__main__":
         print("First 3 editions:")
         for e in eds[:3]:
             print("  *", e["title"], "|", e.get("publisher"), "|", e.get("publish_year"), "|", e.get("isbn"))
+
