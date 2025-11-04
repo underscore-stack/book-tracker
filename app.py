@@ -121,21 +121,26 @@ if query:
                                     book["isbn"] = ed.get("isbn", "")
                                     st.success("✔️ Edition selected. You can now use the form below.")
 
-                            # offer debug / raw view for this work
-                            with st.expander("View editions"):
-                                work_olid = book.get("openlibrary_id")
-                                dbg = st.checkbox("Show raw OpenLibrary response", value=False, key=f"dbg_{work_olid}_{idx}")
-                                if dbg:
-                                    url, status, raw = fetch_editions_for_work_raw(work_olid, limit=50)
-                                    st.write("**Request URL:**", url)
-                                    st.write("**HTTP status:**", status)
-                                    st.json(raw)
-                                    st.download_button(
-                                        "Download raw JSON",
-                                        data=json.dumps(raw, indent=2),
-                                        file_name=f"openlibrary_editions_{work_olid}.json",
-                                        mime="application/json",
-                                    )
+                            # offer debug / raw view for this work (no nested expander)
+                            work_olid = book.get("openlibrary_id")
+                            dbg = st.checkbox("🐞 Show raw OpenLibrary response", value=False, key=f"dbg_{work_olid}_{idx}")
+                            if dbg:
+                                url, status, raw = fetch_editions_for_work_raw(work_olid, limit=50)
+                                st.write("**Request URL:**", url)
+                                st.write("**HTTP status:**", status)
+                                st.json(raw)
+                                st.download_button(
+                                    "Download raw JSON",
+                                    data=json.dumps(raw, indent=2),
+                                    file_name=f"openlibrary_editions_{work_olid}.json",
+                                    mime="application/json",
+                                )
+                                # also show normalized fetch metadata (don’t re-nest anything)
+                                _, dbg_info = fetch_editions_for_work(work_olid, limit=50, debug=True)
+                                if isinstance(dbg_info, dict):
+                                    st.write("**Normalized fetch URL:**", dbg_info.get("url"))
+                                    st.write("**Normalized HTTP status:**", dbg_info.get("status"))
+
 
                                 ed_list, dbg_info = fetch_editions_for_work(work_olid, limit=50, debug=True)
                                 if dbg:
