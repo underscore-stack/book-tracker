@@ -178,7 +178,7 @@ if query:
                 local_cover = get_cached_or_drive_cover({"isbn": book.get("isbn", ""), "cover_url": book.get("cover_url", "")})
 
                 if local_cover and os.path.exists(local_cover):
-                    st.image(local_cover, use_container_width=True)
+                    st.image(local_cover, use_column_width=True)
                 else:
                     st.caption("No cover available")
 
@@ -713,7 +713,7 @@ else:
                         with layout_right:
                             local_cover = get_cached_cover(isbn, cover_url)
                             if local_cover and os.path.exists(local_cover):
-                                st.image(local_cover, use_container_width=True)
+                                st.image(local_cover, use_column_width=True)
                             else:
                                 st.caption("No cover available")
 
