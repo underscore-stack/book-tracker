@@ -76,7 +76,7 @@ if query:
     results = search_books(query)
     for idx, book in enumerate(results):
         with st.expander(f"**{book.get('title','Untitled')}** by {book.get('author','')}"):
-            if st.button("📚 View Editions", key=f"editions_{idx}"):
+            if st.button("📚 View Editions", key=f"editions_{work_olid}_{idx}"):
                 st.session_state[f"selected_work_{idx}"] = book.get("openlibrary_id")
 
             selected_work = st.session_state.get(f"selected_work_{idx}")
@@ -97,7 +97,7 @@ if query:
                                 st.markdown(f"**Publisher:** {ed.get('publisher','')}")
                                 st.markdown(f"**Published:** {ed.get('publish_date','')}")
                                 st.markdown(f"**ISBN:** {ed.get('isbn','')}")
-                                if st.button("➕ Use This Edition", key=f"use_{idx}_{ed.get('openlibrary_id','')}"):
+                                if st.button("➕ Use This Edition", key=f"use_{work_olid}_{idx}_{ed.get('openlibrary_id','')}"):
                                     # Save editable fields to enriched
                                     st.session_state[f"enriched_{idx}"] = {
                                         "publisher": ed.get("publisher", ""),
@@ -151,7 +151,7 @@ if query:
                     st.warning("No English editions found.")
 
             # Enrich
-            if st.button(f"🔍 Enrich", key=f"enrich_{idx}"):
+            if st.button(f"🔍 Enrich", key=f"enrich_{work_olid}_{idx}"):
                 meta = st.session_state.get(f"enriched_{idx}", {})
 
                 existing = {
@@ -175,7 +175,7 @@ if query:
             meta = st.session_state.get(f"enriched_{idx}", {})
 
             # Start the form inside the expander
-            with st.form(key=f"form_{idx}"):
+            with st.form(key=f"form_{work_olid}_{idx}"):
                 isbn_val = st.session_state.get(f"isbn_{idx}", book.get("isbn", ""))
                 cover_src = st.session_state.get(f"cover_{idx}", book.get("cover_url", ""))
 
