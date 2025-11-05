@@ -73,13 +73,17 @@ st.header("🔎 Search for a book to add")
 query = st.text_input("Enter book title or author")
 
 if query:
-    results = search_books(query)
-    for idx, book in enumerate(results):
-        with st.expander(f"**{book.get('title','Untitled')}** by {book.get('author','')}"):
-            work_olid = book.get("openlibrary_id", f"unknown_{idx}")
-            if st.button("📚 View Editions", key=f"editions_{work_olid}_{idx}"):
-                st.session_state[f"selected_work_{idx}"] = book.get("openlibrary_id")
+    # cache search results
+    if "search_query" not in st.session_state or st.session_state.search_query != query:
+        st.session_state.search_query = query
+        st.session_state.search_results = search_books(query)
 
+    results = st.session_state.get("search_results", [])
+    for idx, book in enumerate(results):
+        work_olid = book.get("openlibrary_id", f"unknown_{idx}")
+        if st.button("📚 View Editions", key=f"editions_{work_olid}_{idx}"):
+            st.session_state[f"selected_work_{idx}"] = work_olid
+            
             selected_work = st.session_state.get(f"selected_work_{idx}")
             if selected_work and selected_work == book.get("openlibrary_id"):
                 # fetch editions
