@@ -120,7 +120,8 @@ if st.session_state.search_results:
                                 st.markdown(f"**Publisher:** {ed.get('publisher','')}")
                                 st.markdown(f"**Published:** {ed.get('publish_date','')}")
                                 st.markdown(f"**ISBN:** {ed.get('isbn','')}")
-                                if st.button("➕ Use This Edition", key=f"use_{work_olid}_{idx}_{ed.get('openlibrary_id','')}"):
+                                unique_key = f"use_{work_olid}_{idx}_{ed.get('edition_key','unknown')}"
+                                if st.button("➕ Use This Edition", key=unique_key):
                                     # Save editable fields to enriched
                                     st.session_state[f"enriched_{idx}"] = {
                                         "publisher": ed.get("publisher", ""),
