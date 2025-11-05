@@ -77,7 +77,7 @@ if query:
     for idx, book in enumerate(results):
         with st.expander(f"**{book.get('title','Untitled')}** by {book.get('author','')}"):
             work_olid = book.get("openlibrary_id", f"unknown_{idx}")
-            if st.button("📚 View Editions", key=f"editions_{work_olid}_{idx}")::
+            if st.button("📚 View Editions", key=f"editions_{work_olid}_{idx}"):
                 st.session_state[f"selected_work_{idx}"] = book.get("openlibrary_id")
 
             selected_work = st.session_state.get(f"selected_work_{idx}")
