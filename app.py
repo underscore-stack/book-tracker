@@ -72,6 +72,23 @@ if st.session_state.get("deleted_message"):
 st.header("🔎 Search for a book to add")
 query = st.text_input("Enter book title or author")
 
+# initialize session keys
+st.session_state.setdefault("search_results", [])
+st.session_state.setdefault("search_query", "")
+
+if st.button("Search OpenLibrary"):
+    if query.strip():
+        st.session_state.search_query = query.strip()
+        st.session_state.search_results = search_books(query.strip())
+
+# only show search results if we have them
+if st.session_state.search_results:
+    st.subheader(f"Results for '{st.session_state.search_query}'")
+    for idx, book in enumerate(st.session_state.search_results):
+        work_olid = book.get("openlibrary_id", f"unknown_{idx}")
+        if st.button("📚 View Editions", key=f"editions_{work_olid}_{idx}"):
+            st.session_state[f"selected_work_{idx}"] = work_olid
+            
 if query:
     # cache search results
     if "search_query" not in st.session_state or st.session_state.search_query != query:
