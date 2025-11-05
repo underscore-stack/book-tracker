@@ -336,7 +336,13 @@ else:
             month_ok = not st.session_state.selected_months or month_name in st.session_state.selected_months
             fiction_ok = not st.session_state.fiction_filter or b.get("fiction_nonfiction", "") in st.session_state.fiction_filter
             gender_ok = not st.session_state.gender_filter or b.get("author_gender", "") in st.session_state.gender_filter
-            tag_ok = not st.session_state.tag_filter or st.session_state.tag_filter.lower() in (b.get("tags") or "").lower()
+            tags_val = b.get("tags", "")
+            if isinstance(tags_val, (list, tuple)):
+                tags_val = ", ".join(str(t) for t in tags_val)
+            else:
+                tags_val = str(tags_val)
+            tag_ok = not st.session_state.tag_filter or st.session_state.tag_filter.lower() in tags_val.lower()
+
             search_query = st.session_state.get("search_query", "").strip().lower()
             search_ok = (
                 not search_query
