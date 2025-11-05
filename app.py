@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import uuid
 from collections import defaultdict
 from datetime import datetime
 
@@ -96,9 +97,27 @@ if st.session_state.search_results:
             if st.button("📚 View Editions", key=f"editions_{work_olid}_{idx}"):
                 st.session_state[f"selected_work_{idx}"] = work_olid
                 editions = fetch_editions_for_work(work_olid)
+            
                 if editions:
-                    for ed in editions[:5]:
+                    for j, ed in enumerate(editions):  # 👈 add j here
                         st.write(f"- {ed.get('publisher','')} ({ed.get('publish_year','')}) — {ed.get('isbn','')}")
+            
+                        # use j to make each key unique
+                        unique_key = f"use_{work_olid}_{idx}_{j}"
+                        if st.button("➕ Use This Edition", key=unique_key):
+                            st.session_state[f"enriched_{idx}"] = {
+                                "publisher": ed.get("publisher", ""),
+                                "pub_year": ed.get("publish_year"),
+                                "pages": ed.get("pages"),
+                                "genre": "",
+                                "author_gender": "",
+                                "fiction_nonfiction": "",
+                                "tags": [],
+                            }
+            
+                            st.session_state[f"isbn_{idx}"] = ed.get("isbn", "")
+                            st.session_state[f"cover_{idx}"] = ed.get("cover_url", "")
+                            st.success("✔️ Edition selected. You can now use the form below.")
                 else:
                     st.warning("No English editions found.")
             
