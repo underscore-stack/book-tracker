@@ -86,20 +86,23 @@ if st.session_state.search_results:
     st.subheader(f"Results for '{st.session_state.search_query}'")
     for idx, book in enumerate(st.session_state.search_results):
         work_olid = book.get("openlibrary_id", f"unknown_{idx}")
-        if st.button("📚 View Editions", key=f"editions_{work_olid}_{idx}"):
-            st.session_state[f"selected_work_{idx}"] = work_olid
-            
-if query:
-    # cache search results
-    if "search_query" not in st.session_state or st.session_state.search_query != query:
-        st.session_state.search_query = query
-        st.session_state.search_results = search_books(query)
+        title = book.get("title", "Untitled")
+        author = book.get("author", "")
+        cover = book.get("cover_url", "")
 
-    results = st.session_state.get("search_results", [])
-    for idx, book in enumerate(results):
-        work_olid = book.get("openlibrary_id", f"unknown_{idx}")
-        if st.button("📚 View Editions", key=f"editions_{work_olid}_{idx}"):
-            st.session_state[f"selected_work_{idx}"] = work_olid
+        with st.expander(f"**{title}** by {author}"):
+            if cover and isinstance(cover, str) and cover.startswith("http"):
+                st.image(cover, width=80)
+            st.write(f"**First Published:** {book.get('first_publish_year', '—')}")
+            st.write(f"**Edition Count:** {book.get('edition_count', '—')}")
+            if st.button("📚 View Editions", key=f"editions_{work_olid}_{idx}"):
+                st.session_state[f"selected_work_{idx}"] = work_olid
+                editions, _ = fetch_editions_for_work(work_olid)
+                if editions:
+                    for ed in editions[:5]:
+                        st.write(f"- {ed.get('publisher','')} ({ed.get('publish_year','')}) — {ed.get('isbn','')}")
+                else:
+                    st.warning("No English editions found.")
             
             selected_work = st.session_state.get(f"selected_work_{idx}")
             if selected_work and selected_work == book.get("openlibrary_id"):
