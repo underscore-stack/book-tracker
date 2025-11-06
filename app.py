@@ -334,12 +334,18 @@ else:
             except Exception:
                 tag_ok = True  # Fallback: don't skip the book
 
-            search_query = st.session_state.get("search_query", "").strip().lower()
+            # --- Normalize search query and compare safely ---
+            search_query = str(st.session_state.get("search_query", "")).strip().lower()
+            
+            title_str = str(b.get("title", ""))
+            author_str = str(b.get("author", ""))
+            
             search_ok = (
                 not search_query
-                or search_query in (b.get("title") or "").lower()
-                or search_query in (b.get("author") or "").lower()
+                or search_query in title_str.lower()
+                or search_query in author_str.lower()
             )
+
 
             if year_ok and month_ok and fiction_ok and gender_ok and tag_ok and search_ok:
                 filtered_books.append(b)
