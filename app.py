@@ -96,7 +96,7 @@ if st.session_state.search_results:
                 st.image(cover, width=80)
             if st.button("📚 View Editions", key=f"editions_{work_olid}_{idx}"):
                 st.session_state[f"selected_work_{idx}"] = work_olid
-                editions, _ = fetch_editions_for_work(work_olid, limit=10, debug=False)  # limit + english filter
+                editions = fetch_editions_for_work(work_olid, limit=10, debug=False)  # limit + english filter
             
                 if not editions:
                     st.warning("No English editions found.")
