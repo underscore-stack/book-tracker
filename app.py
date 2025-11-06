@@ -97,7 +97,14 @@ if st.session_state.search_results:
             if st.button("📚 View Editions", key=f"editions_{work_olid}_{idx}"):
                 st.session_state[f"selected_work_{idx}"] = work_olid
                 editions = fetch_editions_for_work(work_olid, limit=10, debug=False)  # limit + english filter
-            
+
+                # 🐞 Debug: print the raw OpenLibrary payload to console
+                from openlibrary_local import _http_get_json, OL_BASE
+                raw_url = f"{OL_BASE}/works/{work_olid.replace('/works/', '')}/editions.json?limit=50"
+                _, meta = _http_get_json(raw_url)
+                print(f"🔍 RAW EDITIONS for {work_olid} → {raw_url}")
+                print(json.dumps(meta.get('raw', {}), indent=2))
+                
                 if not editions:
                     st.warning("No English editions found.")
                 else:
