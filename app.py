@@ -317,11 +317,20 @@ else:
             fiction_ok = not st.session_state.fiction_filter or b.get("fiction_nonfiction", "") in st.session_state.fiction_filter
             gender_ok = not st.session_state.gender_filter or b.get("author_gender", "") in st.session_state.gender_filter
             tags_val = b.get("tags", "")
-            if isinstance(tags_val, (list, tuple)):
+
+            # 🔧 Normalize tags to a lowercase string safely
+            if isinstance(tags_val, (list, tuple, set)):
                 tags_val = ", ".join(str(t) for t in tags_val)
-            else:
+            elif not isinstance(tags_val, str):
                 tags_val = str(tags_val)
-            tag_ok = not st.session_state.tag_filter or st.session_state.tag_filter.lower() in tags_val.lower()
+            
+            try:
+                tag_ok = (
+                    not st.session_state.tag_filter
+                    or st.session_state.tag_filter.lower() in tags_val.lower()
+                )
+            except Exception:
+                tag_ok = True  # Fallback: ignore malformed tag
 
             search_query = st.session_state.get("search_query", "").strip().lower()
             search_ok = (
