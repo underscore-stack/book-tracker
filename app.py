@@ -96,102 +96,37 @@ if st.session_state.search_results:
                 st.image(cover, width=80)
             if st.button("📚 View Editions", key=f"editions_{work_olid}_{idx}"):
                 st.session_state[f"selected_work_{idx}"] = work_olid
-                editions = fetch_editions_for_work(work_olid)
+                editions, _ = fetch_editions_for_work(work_olid, limit=10, debug=False)  # limit + english filter
             
-                if editions:
-                    for j, ed in enumerate(editions):  # 👈 add j here
-                        st.write(f"- {ed.get('publisher','')} ({ed.get('publish_year','')}) — {ed.get('isbn','')}")
+                if not editions:
+                    st.warning("No English editions found.")
+                else:
+                    st.markdown("### Editions")
+                    for j, ed in enumerate(editions[:10]):
+                        publisher = ed.get("publisher", "Unknown publisher")
+                        year = ed.get("publish_year")
+                        isbn = ed.get("isbn", "")
+                        cover = ed.get("cover_url", "")
+                        display = f"- **{publisher}** {f'({year})' if year else ''} — {isbn}"
+                        st.write(display)
             
-                        # use j to make each key unique
+                        # unique key uses work_olid, idx, and j
                         unique_key = f"use_{work_olid}_{idx}_{j}"
                         if st.button("➕ Use This Edition", key=unique_key):
                             st.session_state[f"enriched_{idx}"] = {
-                                "publisher": ed.get("publisher", ""),
-                                "pub_year": ed.get("publish_year"),
+                                "publisher": publisher,
+                                "pub_year": year,
                                 "pages": ed.get("pages"),
                                 "genre": "",
                                 "author_gender": "",
                                 "fiction_nonfiction": "",
                                 "tags": [],
                             }
-            
-                            st.session_state[f"isbn_{idx}"] = ed.get("isbn", "")
-                            st.session_state[f"cover_{idx}"] = ed.get("cover_url", "")
+                            st.session_state[f"isbn_{idx}"] = isbn
+                            st.session_state[f"cover_{idx}"] = cover
                             st.success("✔️ Edition selected. You can now use the form below.")
-                else:
-                    st.warning("No English editions found.")
-            
-            selected_work = st.session_state.get(f"selected_work_{idx}")
-            if selected_work and selected_work == book.get("openlibrary_id"):
-                # fetch editions
-                editions = fetch_editions_for_work(book.get("openlibrary_id"))
-                if editions:
-                    for ed in editions:
-                        with st.container():
-                            cols = st.columns([1, 4])
-                            with cols[0]:
-                                cu = ed.get("cover_url", "")
-                                if isinstance(cu, str) and cu.startswith("http") and "/b/id/0-" not in cu:
-                                    st.image(cu, width=80)
-                                else:
-                                    st.caption("No cover")
-                            with cols[1]:
-                                st.markdown(f"**Publisher:** {ed.get('publisher','')}")
-                                st.markdown(f"**Published:** {ed.get('publish_date','')}")
-                                st.markdown(f"**ISBN:** {ed.get('isbn','')}")
-                                unique_key = f"use_{work_olid}_{idx}_{ed.get('edition_key','unknown')}"
-                                if st.button("➕ Use This Edition", key=unique_key):
-                                    # Save editable fields to enriched
-                                    st.session_state[f"enriched_{idx}"] = {
-                                        "publisher": ed.get("publisher", ""),
-                                        "pub_year": ed.get("publish_year"),
-                                        "pages": ed.get("pages"),
-                                        "genre": "",
-                                        "author_gender": "",
-                                        "fiction_nonfiction": "",
-                                        "tags": [],
-                                    }
 
-                                    # Persist non-editable fields separately
-                                    st.session_state[f"isbn_{idx}"] = ed.get("isbn", "")
-                                    st.session_state[f"cover_{idx}"] = ed.get("cover_url", "")
-
-                                    # Also override displayed book info
-                                    book["cover_url"] = ed.get("cover_url", "")
-                                    book["publisher"] = ed.get("publisher", "")
-                                    book["pub_year"] = ed.get("publish_year")
-                                    book["pages"] = ed.get("pages")
-                                    book["isbn"] = ed.get("isbn", "")
-                                    st.success("✔️ Edition selected. You can now use the form below.")
-
-                            # offer debug / raw view for this work (no nested expander)
-                            work_olid = book.get("openlibrary_id")
-                            dbg = st.checkbox("🐞 Show raw OpenLibrary response", value=False, key=f"dbg_{work_olid}_{idx}")
-                            if dbg:
-                                url, status, raw = fetch_editions_for_work_raw(work_olid, limit=50)
-                                st.write("**Request URL:**", url)
-                                st.write("**HTTP status:**", status)
-                                st.json(raw)
-                                st.download_button(
-                                    "Download raw JSON",
-                                    data=json.dumps(raw, indent=2),
-                                    file_name=f"openlibrary_editions_{work_olid}.json",
-                                    mime="application/json",
-                                )
-                                # also show normalized fetch metadata (don’t re-nest anything)
-                                _, dbg_info = fetch_editions_for_work(work_olid, limit=50, debug=True)
-                                if isinstance(dbg_info, dict):
-                                    st.write("**Normalized fetch URL:**", dbg_info.get("url"))
-                                    st.write("**Normalized HTTP status:**", dbg_info.get("status"))
-
-
-                                ed_list, dbg_info = fetch_editions_for_work(work_olid, limit=50, debug=True)
-                                if dbg:
-                                    st.write("**Normalized fetch URL:**", dbg_info.get("url"))
-                                    st.write("**Normalized HTTP status:**", dbg_info.get("status"))
-
-                else:
-                    st.warning("No English editions found.")
+        
 
             # Enrich
             if st.button(f"🔍 Enrich", key=f"enrich_{work_olid}_{idx}"):
