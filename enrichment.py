@@ -4,11 +4,18 @@ load_dotenv()
 import os
 import json
 import re
+import streamlit as st
 from openai import OpenAI
 from openlibrary_local import fetch_detailed_metadata
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# ✅ Prefer Streamlit secrets, fall back to environment variable
+api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 
+if not api_key:
+    st.warning("⚠️ OPENAI_API_KEY not found — enrichment disabled.")
+    client = None
+else:
+    client = OpenAI(api_key=api_key)
 
 def clean_gpt_json(text: str) -> str:
     """Strip markdown-style code fences and stray backticks before parsing."""
@@ -110,3 +117,4 @@ Respond with *only raw JSON* (no backticks, no Markdown formatting) matching thi
     }
 
     return final
+
