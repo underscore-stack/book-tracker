@@ -84,6 +84,8 @@ if st.session_state.search_results:
         st.subheader(f"Results for '{search_label}'")
     else:
         st.subheader("Search Results")
+        st.write(f"DEBUG selected_{idx}:", st.session_state.get(f"selected_{idx}"))
+
     for idx, book in enumerate(st.session_state.search_results):
         work_olid = book.get("work_id", f"unknown_{idx}")
         title = book.get("title", "Untitled")
