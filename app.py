@@ -98,28 +98,31 @@ if st.session_state.search_results:
                 else:
                     st.markdown("### Editions")
                     for j, ed in enumerate(editions[:10]):
-                        publisher = ed.get("publisher", "Unknown publisher")
-                        year = ed.get("publish_year")
-                        isbn = ed.get("isbn", "")
-                        cover = ed.get("cover_url", "")
-                        display = f"- **{publisher}** {f'({year})' if year else ''} — {isbn}"
-                        st.write(display)
+                        title = ed.get("title", "Untitled")
+                        author = ed.get("authors", "Unknown Author")
+                        pub_date = ed.get("publish_date", "N/A")
+                        publisher = ed.get("publisher", "N/A")
+                        isbn = ed.get("isbn", "N/A")
+                    
+                        st.markdown(
+                            f"**{title}** — *{author}*  \n"
+                            f"📅 {pub_date} 🏢 {publisher} 📖 ISBN: {isbn}"
+                        )
             
-                        # unique key uses work_olid, idx, and j
-                        unique_key = f"use_{work_olid}_{idx}_{j}"
-                        if st.button("➕ Use This Edition", key=unique_key):
-                            st.session_state[f"enriched_{idx}"] = {
-                                "publisher": publisher,
-                                "pub_year": year,
-                                "pages": ed.get("pages"),
-                                "genre": "",
-                                "author_gender": "",
-                                "fiction_nonfiction": "",
-                                "tags": [],
-                            }
-                            st.session_state[f"isbn_{idx}"] = isbn
-                            st.session_state[f"cover_{idx}"] = cover
-                            st.success("✔️ Edition selected. You can now use the form below.")
+                    unique_key = f"use_{work_olid}_{idx}_{j}"
+                    if st.button("➕ Use This Edition", key=unique_key):
+                        st.session_state[f"enriched_{idx}"] = {
+                            "publisher": ed.get("publisher", ""),
+                            "pub_year": ed.get("publish_date", ""),  # or parse to year if needed
+                            "pages": ed.get("pages"),
+                            "genre": "",
+                            "author_gender": "",
+                            "fiction_nonfiction": "",
+                            "tags": [],
+                        }
+                        st.session_state[f"isbn_{idx}"] = ed.get("isbn", "")
+                        st.session_state[f"cover_{idx}"] = ed.get("cover_url", "")
+                        st.success("✔️ Edition selected. You can now use the form below.")
 
         
 
