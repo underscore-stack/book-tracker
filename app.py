@@ -17,6 +17,11 @@ from openlibrary_new import search_works, fetch_editions_for_work
 st.set_page_config(page_title="Book Tracker", layout="wide")
 st.title("📚 Book Tracker")
 
+def persist_selection(work_olid, data):
+    key = f"selected_work_{work_olid}"
+    st.session_state[key] = data
+    st.session_state["last_selected_work"] = work_olid
+
 
 def extract_book_fields(book):
     """Safely extract isbn and cover_url from any book-like object."""
@@ -86,8 +91,11 @@ if st.session_state.search_results:
         st.subheader("Search Results")
 
     for idx, book in enumerate(st.session_state.search_results):
-        st.write(f"DEBUG selected_{idx}:", st.session_state.get(f"selected_{idx}"))
         work_olid = book.get("work_id", f"unknown_{idx}")
+        selected = st.session_state.get(f"selected_work_{work_olid}", {})
+        if selected:
+            book.update(selected)
+        st.write(f"DEBUG selected_work_{work_olid}:", selected)
         title = book.get("title", "Untitled")
         author = book.get("author", "")
         cover = book.get("cover_url", "")
@@ -140,7 +148,7 @@ if st.session_state.search_results:
                         # ✅ Move the button INSIDE the loop
                         unique_key = f"use_{work_olid}_{idx}_{j}"
                         if st.button("➕ Use This Edition", key=unique_key):
-                            # Parse a year from publish_date if you want a year field
+                            # Parse year helper unchanged...
                             def extract_year(s):
                                 import re
                                 if not s:
@@ -148,22 +156,19 @@ if st.session_state.search_results:
                                 m = re.search(r"(18|19|20)\d{2}", str(s))
                                 return int(m.group(0)) if m else ""
                         
-                            st.session_state[f"selected_{idx}"] = {
-                                "title": ed.get("title", "") or book.get("title",""),
-                                "author": ed.get("authors", "") or book.get("author",""),
+                            data = {
+                                "title": ed.get("title", "") or book.get("title", ""),
+                                "author": ed.get("authors", "") or book.get("author", ""),
                                 "publisher": ed.get("publisher", ""),
                                 "pub_year": extract_year(ed.get("publish_date", "")),
                                 "pages": ed.get("pages"),
-                                "isbn": ed.get("isbn", "") or book.get("isbn",""),
-                                "cover_url": ed.get("cover_url", "") or book.get("cover_url",""),
+                                "isbn": ed.get("isbn", "") or book.get("isbn", ""),
+                                "cover_url": ed.get("cover_url", "") or book.get("cover_url", ""),
                                 "work_id": work_olid,
                             }
-                        
-                            # Reset any previous enrichment for this result so we show base first
-                            st.session_state.pop(f"enriched_{idx}", None)
+                            persist_selection(work_olid, data)
                             st.success("✔️ Edition selected. You can now review/edit and then Enrich to fill gaps.")
 
-   
 
             # Enrich
             if st.button(f"🔍 Enrich", key=f"enrich_{work_olid}_{idx}"):
