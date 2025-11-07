@@ -12,12 +12,7 @@ import streamlit as st
 from covers_google import get_cached_or_drive_cover, save_cover_to_drive
 from db_google import add_book, delete_book, get_all_books, update_book_metadata_full
 from enrichment import enrich_book_metadata
-from openlibrary_local import (
-    fetch_editions_for_work,
-    fetch_editions_for_work_raw,
-    fetch_detailed_metadata,
-    search_books,
-)
+from openlibrary_new import search_works, fetch_editions_for_work
 
 st.set_page_config(page_title="Book Tracker", layout="wide")
 st.title("📚 Book Tracker")
@@ -80,13 +75,13 @@ st.session_state.setdefault("search_query", "")
 if st.button("Search OpenLibrary"):
     if query.strip():
         st.session_state.search_query = query.strip()
-        st.session_state.search_results = search_books(query.strip())
+        st.session_state.search_results = search_works(query.strip())
 
 # only show search results if we have them
 if st.session_state.search_results:
     st.subheader(f"Results for '{st.session_state.search_query}'")
     for idx, book in enumerate(st.session_state.search_results):
-        work_olid = book.get("openlibrary_id", f"unknown_{idx}")
+        work_olid = book.get("work_id", f"unknown_{idx}")
         title = book.get("title", "Untitled")
         author = book.get("author", "")
         cover = book.get("cover_url", "")
@@ -97,13 +92,6 @@ if st.session_state.search_results:
             if st.button("📚 View Editions", key=f"editions_{work_olid}_{idx}"):
                 st.session_state[f"selected_work_{idx}"] = work_olid
                 editions = fetch_editions_for_work(work_olid, limit=10, debug=False)  # limit + english filter
-
-                # 🐞 Debug: print the raw OpenLibrary payload to console
-                from openlibrary_local import _http_get_json, OL_BASE
-                raw_url = f"{OL_BASE}/works/{work_olid.replace('/works/', '')}/editions.json?limit=50"
-                _, meta = _http_get_json(raw_url)
-                print(f"🔍 RAW EDITIONS for {work_olid} → {raw_url}")
-                print(json.dumps(meta.get('raw', {}), indent=2))
                 
                 if not editions:
                     st.warning("No English editions found.")
@@ -193,17 +181,6 @@ if st.session_state.search_results:
                     fiction_options,
                     index=fiction_options.index(meta.get("fiction_nonfiction", "")) if meta.get("fiction_nonfiction", "") in fiction_options else 0,
                 )
-
-                raw_tags = meta.get("tags", [])
-                # normalize to list[str]
-                if raw_tags is None:
-                    raw_tags = []
-                elif isinstance(raw_tags, str):
-                    raw_tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
-                elif isinstance(raw_tags, (set, tuple)):
-                    raw_tags = list(raw_tags)
-
-                tags_default = ", ".join([str(t) for t in raw_tags])
 
                 tags = st.text_input("Tags (comma-separated)", value=tags_default)
                 date = st.date_input("Date Finished")
