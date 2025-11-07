@@ -115,7 +115,6 @@ if st.session_state.search_results:
         selected = st.session_state.get(f"selected_work_{work_olid}", {})
         if selected:
             book.update(selected)
-        st.write(f"DEBUG selected_work_{work_olid}:", selected)
         title = book.get("title", "Untitled")
         author = book.get("author", "")
         cover = book.get("cover_url", "")
@@ -190,42 +189,30 @@ if st.session_state.search_results:
 
             # Enrich
             if st.button(f"🔍 Enrich", key=f"enrich_{work_olid}_{idx}"):
-                meta = st.session_state.get(f"enriched_{idx}", {})
-
                 existing = {
-                    "publisher": meta.get("publisher") or book.get("publisher"),
-                    "pub_year": meta.get("pub_year") or book.get("pub_year"),
-                    "pages": meta.get("pages") or book.get("pages"),
-                    "isbn": book.get("isbn"),
-                    "author_gender": meta.get("author_gender", ""),
-                    "fiction_nonfiction": meta.get("fiction_nonfiction", ""),
-                    "tags": meta.get("tags", []),
-                    "cover_url": book.get("cover_url"),
+                    "publisher": combined.get("publisher"),
+                    "pub_year": combined.get("pub_year"),
+                    "pages": combined.get("pages"),
+                    "genre": combined.get("genre"),
+                    "fiction_nonfiction": combined.get("fiction_nonfiction"),
+                    "author_gender": combined.get("author_gender"),
+                    "tags": combined.get("tags"),
+                    "isbn": combined.get("isbn"),
+                    "cover_url": combined.get("cover_url"),
                 }
-                if enrich_clicked:
-                    existing = {
-                        "publisher": combined.get("publisher"),
-                        "pub_year": combined.get("pub_year"),
-                        "pages": combined.get("pages"),
-                        "genre": combined.get("genre"),
-                        "fiction_nonfiction": combined.get("fiction_nonfiction"),
-                        "author_gender": combined.get("author_gender"),
-                        "tags": combined.get("tags"),
-                        "isbn": combined.get("isbn"),
-                        "cover_url": combined.get("cover_url"),
-                    }
-                    enriched = enrich_book_metadata(
-                        combined["title"],
-                        combined["author"],
-                        combined.get("isbn"),
-                        existing=existing,
-                    )
-                    if "error" in enriched:
-                        st.error(f"Enrichment failed: {enriched['error']}")
-                    else:
-                        st.session_state[f"enriched_{idx}"] = enriched
-                        st.success("Metadata enriched.")
-                        st.rerun()
+                enriched = enrich_book_metadata(
+                    combined["title"],
+                    combined["author"],
+                    combined.get("isbn"),
+                    existing=existing,
+                )
+                if "error" in enriched:
+                    st.error(f"Enrichment failed: {enriched['error']}")
+                else:
+                    st.session_state[f"enriched_{idx}"] = enriched
+                    st.success("Metadata enriched.")
+                    st.rerun()
+
 
 
             # Make sure we pull the latest selected edition info
@@ -529,7 +516,7 @@ if filtered_books:
             color=alt.Color("year:N", title="Year"),
             tooltip=["year:N", "month:N", "pages:Q"],
         )
-        combined = (
+        combinedCh = (
             base.mark_line(point=True)
             + base.transform_regression("month_num", "pages", groupby=["year"]).mark_line(strokeDash=[4, 2])
         ).properties(title="Pages Read per Month by Year").interactive()
@@ -667,7 +654,7 @@ if filtered_books:
         with col2:
             st.altair_chart(pie_chart_g, use_container_width=True)
 
-        st.altair_chart(combined, use_container_width=True)
+        st.altair_chart(combinedCh, use_container_width=True)
         st.altair_chart(chart_cum_words, use_container_width=True)
         st.altair_chart(chart_books, use_container_width=True)
         st.altair_chart(chart_cum_books, use_container_width=True)
