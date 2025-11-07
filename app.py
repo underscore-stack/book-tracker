@@ -796,7 +796,9 @@ else:
                         st.markdown(f"<div class='book-title'>{title}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='book-author'>{author}</div>", unsafe_allow_html=True)
                     with cols[2]:
-                        if st.button("▶", key=f"expand_{book_id}_{year}_{month_code}"):
+                        import hashlib
+                        salt = hashlib.sha1(f"{book_id}_{year}_{month_code}".encode()).hexdigest()[:6]
+                        if st.button("▶", key=f"expand_{book_id}_{year}_{month_code}_{salt}"):
                             st.session_state[f"expanded_{book_id}"] = not st.session_state[f"expanded_{book_id}"]
 
                     if st.session_state[f"expanded_{book_id}"]:
