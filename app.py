@@ -862,19 +862,28 @@ else:
                                 enrich_clicked = st.form_submit_button("🔍 Enrich Metadata")
 
                                 if enrich_clicked:
-                                    # Use combined values as "existing" so enrichment ONLY fills what's missing.
+                                    # use the visible field values, not 'combined'
                                     existing = {
-                                        "publisher": combined["publisher"],
-                                        "pub_year":  combined["pub_year"],
-                                        "pages":     combined["pages"],
-                                        "genre":     combined["genre"],
-                                        "fiction_nonfiction": combined["fiction_nonfiction"],
-                                        "author_gender":      combined["author_gender"],
-                                        "tags":      raw_tags,
-                                        "isbn":      combined["isbn"],
-                                        "cover_url": combined["cover_url"],
+                                        "publisher": new_publisher,
+                                        "pub_year": new_pub_year,
+                                        "pages": new_pages,
+                                        "genre": new_genre,
+                                        "fiction_nonfiction": new_fiction,
+                                        "author_gender": new_gender,
+                                        "tags": new_tags.split(","),
+                                        "isbn": new_isbn,
+                                        "cover_url": cover_url,
                                     }
-                                    enriched = enrich_book_metadata(combined["title"], combined["author"], combined["isbn"], existing=existing)
+                                    enriched = enrich_book_metadata(new_title, new_author, new_isbn, existing=existing)
+                                
+                                    if "error" in enriched:
+                                        st.error(f"Enrichment failed: {enriched['error']}")
+                                    else:
+                                        st.session_state[f"edit_enriched_{book_id}"] = enriched
+                                        st.success("✅ Metadata enriched.")
+                                        st.rerun()
+
+
                             
                                     # Store the enrichment so 'combined' shows it on next rerun (without overwriting selected fields)
                                     st.session_state[f"enriched_{idx}"] = enriched or {}
@@ -911,11 +920,3 @@ else:
                                     st.session_state.edit_message = f"Book '{combined['title'] or 'Untitled'}' added!"
                                     st.rerun()
 
-st.divider()
-st.subheader("Mini-button test")
-
-if st.button("Click me!"):
-    st.toast("✅ Streamlit buttons work")
-    st.session_state["clicked_test"] = True
-
-st.write("Session clicked_test =", st.session_state.get("clicked_test"))
