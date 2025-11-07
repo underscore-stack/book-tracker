@@ -895,3 +895,11 @@ else:
                                     st.session_state.edit_message = f"Book '{combined['title'] or 'Untitled'}' added!"
                                     st.rerun()
 
+st.divider()
+st.subheader("Mini-button test")
+
+if st.button("Click me!"):
+    st.toast("✅ Streamlit buttons work")
+    st.session_state["clicked_test"] = True
+
+st.write("Session clicked_test =", st.session_state.get("clicked_test"))
