@@ -88,7 +88,7 @@ if st.session_state.search_results:
         work_olid = book.get("work_id", f"unknown_{idx}")
         title = book.get("title", "Untitled")
         author = book.get("author", "")
- # ---  cover = book.get("cover_url", "")
+        cover = book.get("cover_url", "")
 
         with st.expander(f"**{title}** by {author}"):
             if cover and isinstance(cover, str) and cover.startswith("http"):
