@@ -160,8 +160,10 @@ if st.session_state.search_results:
                 else:
                     st.session_state[f"enriched_{idx}"] = enriched
 
-            # Get enrichment metadata if available
-            meta = st.session_state.get(f"enriched_{idx}", {})
+            # Make sure we pull the latest selected edition info
+            meta = st.session_state.get(f"enriched_{idx}", {}) or {}
+            book_title = meta.get("title") or book.get("title", "")
+            book_author = meta.get("author") or book.get("author", "")
 
             # Start the form inside the expander
             with st.form(key=f"form_{work_olid}_{idx}"):
@@ -175,13 +177,16 @@ if st.session_state.search_results:
                     st.image(local_cover, use_column_width=True)
                 else:
                     st.caption("No cover available")
-
+                    
                 # Show metadata
+                st.write(f"**Title:** {book_title}")
+                st.write(f"**Author:** {book_author}")
                 st.write(f"**Publisher:** {meta.get('publisher') or book.get('publisher', '')}")
                 st.write(f"**Year:** {meta.get('pub_year') or book.get('pub_year', '')}")
                 st.write(f"**Pages:** {meta.get('pages') or book.get('pages', '')}")
                 st.write(f"**ISBN:** {st.session_state.get(f'isbn_{idx}', book.get('isbn', ''))}")
                 st.write(f"**Genre:** {meta.get('genre', '')}")
+
 
                 # Form inputs
                 gender_options = ["", "Male", "Female", "Nonbinary", "Multiple", "Unknown"]
