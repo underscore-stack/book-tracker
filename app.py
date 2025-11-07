@@ -99,6 +99,7 @@ if st.session_state.search_results:
         title = book.get("title", "Untitled")
         author = book.get("author", "")
         cover = book.get("cover_url", "")
+        publisher = book.get("publisher", "")
 
         # restore any previously selected edition data for this result
         selected = st.session_state.get(f"selected_{idx}", {})
