@@ -181,6 +181,18 @@ if st.session_state.search_results:
                     fiction_options,
                     index=fiction_options.index(meta.get("fiction_nonfiction", "")) if meta.get("fiction_nonfiction", "") in fiction_options else 0,
                 )
+                
+                # --- Tags handling (safe default) ---
+                raw_tags = meta.get("tags") if isinstance(meta, dict) else []
+                if not raw_tags:
+                    raw_tags = []
+                elif isinstance(raw_tags, str):
+                    raw_tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
+                elif isinstance(raw_tags, (set, tuple)):
+                    raw_tags = list(raw_tags)
+                
+                tags_default = ", ".join(map(str, raw_tags)) if raw_tags else ""
+                tags = st.text_input("Tags (comma-separated)", value=tags_default)
 
                 tags = st.text_input("Tags (comma-separated)", value=tags_default)
                 date = st.date_input("Date Finished")
