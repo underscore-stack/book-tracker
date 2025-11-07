@@ -17,6 +17,14 @@ from openlibrary_new import search_works, fetch_editions_for_work
 st.set_page_config(page_title="Book Tracker", layout="wide")
 st.title("📚 Book Tracker")
 
+# --- Handle pending edition selection from last click ---
+if "pending_selection" in st.session_state:
+    pending = st.session_state.pop("pending_selection")  # consume it once
+    work_olid = pending["work_olid"]
+    data = pending["data"]
+    st.session_state[f"selected_work_{work_olid}"] = data
+    st.session_state["last_selected_work"] = work_olid
+
 def persist_selection(work_olid, data):
     key = f"selected_work_{work_olid}"
     st.session_state[key] = data
@@ -99,7 +107,7 @@ if st.session_state.search_results:
         title = book.get("title", "Untitled")
         author = book.get("author", "")
         cover = book.get("cover_url", "")
-        publisher = book.get("publisher", "")
+
 
         # restore any previously selected edition data for this result
         selected = st.session_state.get(f"selected_{idx}", {})
@@ -146,42 +154,25 @@ if st.session_state.search_results:
                         if cu and cu.startswith("http"):
                             st.image(cu, width=80)
                     
-                        # ✅ Move the button INSIDE the loop
                         unique_key = f"use_{work_olid}_{idx}_{j}"
-
-                        # 🟩 When clicked, immediately persist full edition data
+                        
                         if st.button("➕ Use This Edition", key=unique_key):
-                            # pull all edition fields right now
-                            title_val = ed.get("title", "") or book.get("title", "")
-                            author_val = ed.get("authors", "") or book.get("author", "")
-                            publisher_val = ed.get("publisher", "")
-                            pub_date_val = ed.get("publish_date", "")
-                            pages_val = ed.get("pages")
-                            isbn_val = ed.get("isbn", "") or book.get("isbn", "")
-                            cover_val = ed.get("cover_url", "") or book.get("cover_url", "")
-                        
-                            # helper to pull a year integer from publish_date
-                            import re
-                            year_match = re.search(r"(18|19|20)\d{2}", str(pub_date_val))
-                            pub_year_val = int(year_match.group(0)) if year_match else ""
-                        
-                            # build and persist immediately
-                            selection = {
-                                "title": title_val,
-                                "author": author_val,
-                                "publisher": publisher_val,
-                                "pub_year": pub_year_val,
-                                "pages": pages_val,
-                                "isbn": isbn_val,
-                                "cover_url": cover_val,
-                                "work_id": work_olid,
+                            # mark which edition was chosen
+                            st.session_state["pending_selection"] = {
+                                "work_olid": work_olid,
+                                "data": {
+                                    "title": ed.get("title", "") or book.get("title", ""),
+                                    "author": ed.get("authors", "") or book.get("author", ""),
+                                    "publisher": ed.get("publisher", ""),
+                                    "pub_year": ed.get("publish_date", ""),
+                                    "pages": ed.get("pages"),
+                                    "isbn": ed.get("isbn", "") or book.get("isbn", ""),
+                                    "cover_url": ed.get("cover_url", "") or book.get("cover_url", ""),
+                                    "work_id": work_olid,
+                                },
                             }
-                        
-                            # save directly to session — use work_olid key (stable)
-                            st.session_state[f"selected_work_{work_olid}"] = selection
-                            st.session_state["last_selected_work"] = work_olid
-                        
-                            st.success("✔️ Edition selected. You can now review/edit and then Enrich to fill gaps.")
+                            st.rerun()
+
 
 
 
