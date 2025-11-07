@@ -188,7 +188,7 @@ if st.session_state.search_results:
 
 
             # Enrich
-            if st.button(f"🔍 Enrich", key=f"enrich_{work_olid}_{idx}"):
+            if st.button(f"🔍 Enrich Metadata", key=f"enrich_{work_olid}_{idx}"):
                 existing = {
                     "publisher": combined.get("publisher"),
                     "pub_year": combined.get("pub_year"),
@@ -210,8 +210,9 @@ if st.session_state.search_results:
                     st.error(f"Enrichment failed: {enriched['error']}")
                 else:
                     st.session_state[f"enriched_{idx}"] = enriched
-                    st.success("Metadata enriched.")
+                    st.success("✅ Metadata enriched.")
                     st.rerun()
+
 
 
 
