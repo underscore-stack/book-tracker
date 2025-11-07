@@ -124,6 +124,8 @@ if st.session_state.search_results:
                         unique_key = f"use_{work_olid}_{idx}_{j}"
                         if st.button("➕ Use This Edition", key=unique_key):
                             st.session_state[f"enriched_{idx}"] = {
+                                "title": ed.get("title", ""),
+                                "author": ed.get("authors", ""),
                                 "publisher": ed.get("publisher", ""),
                                 "pub_year": ed.get("publish_date", ""),
                                 "pages": ed.get("pages"),
@@ -135,9 +137,7 @@ if st.session_state.search_results:
                             st.session_state[f"isbn_{idx}"] = ed.get("isbn", "")
                             st.session_state[f"cover_{idx}"] = ed.get("cover_url", "")
                             st.success("✔️ Edition selected. You can now use the form below.")
-
-
-        
+   
 
             # Enrich
             if st.button(f"🔍 Enrich", key=f"enrich_{work_olid}_{idx}"):
@@ -228,8 +228,8 @@ if st.session_state.search_results:
                             st.warning(f"Failed to upload cover for {isbn_val}; keeping original cover URL")
 
                     book_data = {
-                        "title": book.get("title", ""),
-                        "author": book.get("author", ""),
+                        "title": meta.get("title") or book.get("title", ""),
+                        "author": meta.get("author") or book.get("author", ""),
                         "publisher": meta.get("publisher") or book.get("publisher", ""),
                         "pub_year": meta.get("pub_year") or book.get("pub_year", ""),
                         "pages": meta.get("pages") or book.get("pages"),
@@ -239,7 +239,7 @@ if st.session_state.search_results:
                         "tags": tags,
                         "date_finished": date.strftime("%Y-%m"),
                         "cover_url": cover_src,
-                        "openlibrary_id": book.get("openlibrary_id", ""),
+                        "openlibrary_id": book.get("work_id", ""),
                         "isbn": isbn_val,
                     }
                     book_data["word_count"] = book_data["pages"] * 250 if book_data["pages"] else None
