@@ -79,12 +79,16 @@ if st.button("Search OpenLibrary"):
 
 # only show search results if we have them
 if st.session_state.search_results:
-    st.subheader(f"Results for '{st.session_state.search_query}'")
+    search_label = st.session_state.get("search_query", "").strip() or query.strip()
+    if search_label:
+        st.subheader(f"Results for '{search_label}'")
+    else:
+        st.subheader("Search Results")
     for idx, book in enumerate(st.session_state.search_results):
         work_olid = book.get("work_id", f"unknown_{idx}")
         title = book.get("title", "Untitled")
         author = book.get("author", "")
-        cover = book.get("cover_url", "")
+ # ---  cover = book.get("cover_url", "")
 
         with st.expander(f"**{title}** by {author}"):
             if cover and isinstance(cover, str) and cover.startswith("http"):
@@ -108,21 +112,28 @@ if st.session_state.search_results:
                             f"**{title}** — *{author}*  \n"
                             f"📅 {pub_date} 🏢 {publisher} 📖 ISBN: {isbn}"
                         )
-            
-                    unique_key = f"use_{work_olid}_{idx}_{j}"
-                    if st.button("➕ Use This Edition", key=unique_key):
-                        st.session_state[f"enriched_{idx}"] = {
-                            "publisher": ed.get("publisher", ""),
-                            "pub_year": ed.get("publish_date", ""),  # or parse to year if needed
-                            "pages": ed.get("pages"),
-                            "genre": "",
-                            "author_gender": "",
-                            "fiction_nonfiction": "",
-                            "tags": [],
-                        }
-                        st.session_state[f"isbn_{idx}"] = ed.get("isbn", "")
-                        st.session_state[f"cover_{idx}"] = ed.get("cover_url", "")
-                        st.success("✔️ Edition selected. You can now use the form below.")
+                    
+                        # Optional small cover preview
+                        cu = ed.get("cover_url", "")
+                        if cu and cu.startswith("http"):
+                            st.image(cu, width=80)
+                    
+                        # ✅ Move the button INSIDE the loop
+                        unique_key = f"use_{work_olid}_{idx}_{j}"
+                        if st.button("➕ Use This Edition", key=unique_key):
+                            st.session_state[f"enriched_{idx}"] = {
+                                "publisher": ed.get("publisher", ""),
+                                "pub_year": ed.get("publish_date", ""),
+                                "pages": ed.get("pages"),
+                                "genre": "",
+                                "author_gender": "",
+                                "fiction_nonfiction": "",
+                                "tags": [],
+                            }
+                            st.session_state[f"isbn_{idx}"] = ed.get("isbn", "")
+                            st.session_state[f"cover_{idx}"] = ed.get("cover_url", "")
+                            st.success("✔️ Edition selected. You can now use the form below.")
+
 
         
 
