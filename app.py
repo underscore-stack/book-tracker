@@ -16,6 +16,15 @@ from openlibrary_new import search_works, fetch_editions_for_work
 
 st.set_page_config(page_title="Book Tracker", layout="wide")
 st.title("📚 Book Tracker")
+# --- TEMP DEBUG ---
+st.sidebar.header("🧪 Debug panel (temporary)")
+st.sidebar.write("Session keys:", list(st.session_state.keys()))
+if "pending_selection" in st.session_state:
+    st.sidebar.write("pending_selection →", st.session_state["pending_selection"])
+for k, v in st.session_state.items():
+    if k.startswith("selected_") or k.startswith("selected_work_"):
+        st.sidebar.write(f"{k} →", v)
+# --- END DEBUG ---
 
 # --- Handle pending edition selection from last click ---
 if "pending_selection" in st.session_state:
@@ -154,24 +163,18 @@ if st.session_state.search_results:
                         if cu and cu.startswith("http"):
                             st.image(cu, width=80)
                     
-                        unique_key = f"use_{work_olid}_{idx}_{j}"
+                        import hashlib
                         
-                        if st.button("➕ Use This Edition", key=unique_key):
-                            # mark which edition was chosen
-                            st.session_state["pending_selection"] = {
-                                "work_olid": work_olid,
-                                "data": {
-                                    "title": ed.get("title", "") or book.get("title", ""),
-                                    "author": ed.get("authors", "") or book.get("author", ""),
-                                    "publisher": ed.get("publisher", ""),
-                                    "pub_year": ed.get("publish_date", ""),
-                                    "pages": ed.get("pages"),
-                                    "isbn": ed.get("isbn", "") or book.get("isbn", ""),
-                                    "cover_url": ed.get("cover_url", "") or book.get("cover_url", ""),
-                                    "work_id": work_olid,
-                                },
-                            }
-                            st.rerun()
+                        edition_key = f"{work_olid}_{idx}_{j}"
+                        hash_key = hashlib.sha1(edition_key.encode()).hexdigest()[:10]
+                        
+                        st.caption(f"DEBUG button key → use_btn_{hash_key}")
+                        clicked = st.button("➕ Use This Edition", key=f"use_btn_{hash_key}")
+                        
+                        if clicked:
+                            st.toast(f"Clicked edition for {work_olid}")
+                            print(">>> BUTTON EXECUTED for", work_olid)
+                            st.session_state["last_click_debug"] = {"work": work_olid, "key": hash_key}
 
 
 
