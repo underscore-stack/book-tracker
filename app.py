@@ -123,20 +123,29 @@ if st.session_state.search_results:
                         # ✅ Move the button INSIDE the loop
                         unique_key = f"use_{work_olid}_{idx}_{j}"
                         if st.button("➕ Use This Edition", key=unique_key):
-                            st.session_state[f"enriched_{idx}"] = {
-                                "title": ed.get("title", ""),
-                                "author": ed.get("authors", ""),
+                            # Parse a year from publish_date if you want a year field
+                            def extract_year(s):
+                                import re
+                                if not s:
+                                    return ""
+                                m = re.search(r"(18|19|20)\d{2}", str(s))
+                                return int(m.group(0)) if m else ""
+                        
+                            st.session_state[f"selected_{idx}"] = {
+                                "title": ed.get("title", "") or book.get("title",""),
+                                "author": ed.get("authors", "") or book.get("author",""),
                                 "publisher": ed.get("publisher", ""),
-                                "pub_year": ed.get("publish_date", ""),
+                                "pub_year": extract_year(ed.get("publish_date", "")),
                                 "pages": ed.get("pages"),
-                                "genre": "",
-                                "author_gender": "",
-                                "fiction_nonfiction": "",
-                                "tags": [],
+                                "isbn": ed.get("isbn", "") or book.get("isbn",""),
+                                "cover_url": ed.get("cover_url", "") or book.get("cover_url",""),
+                                "work_id": work_olid,
                             }
-                            st.session_state[f"isbn_{idx}"] = ed.get("isbn", "")
-                            st.session_state[f"cover_{idx}"] = ed.get("cover_url", "")
-                            st.success("✔️ Edition selected. You can now use the form below.")
+                        
+                            # Reset any previous enrichment for this result so we show base first
+                            st.session_state.pop(f"enriched_{idx}", None)
+                            st.success("✔️ Edition selected. You can now review/edit and then Enrich to fill gaps.")
+
    
 
             # Enrich
@@ -165,59 +174,83 @@ if st.session_state.search_results:
             book_title = meta.get("title") or book.get("title", "")
             book_author = meta.get("author") or book.get("author", "")
 
+            # Get the chosen edition (base) + enrichment (fills blanks only)
+            selected = st.session_state.get(f"selected_{idx}", {}) or {}
+            enriched = st.session_state.get(f"enriched_{idx}", {}) or {}
+            
+            def first_nonempty(*vals):
+                for v in vals:
+                    if v is not None and v != "" and v != []:
+                        return v
+                return ""
+            
+            # Combined values that the UI will show (selected has priority; enriched only fills blanks)
+            combined = {
+                "title":     first_nonempty(selected.get("title"),     enriched.get("title"),     book.get("title","")),
+                "author":    first_nonempty(selected.get("author"),    enriched.get("author"),    book.get("author","")),
+                "publisher": first_nonempty(selected.get("publisher"), enriched.get("publisher"), book.get("publisher","")),
+                "pub_year":  first_nonempty(selected.get("pub_year"),  enriched.get("pub_year"),  book.get("pub_year","")),
+                "pages":     first_nonempty(selected.get("pages"),     enriched.get("pages"),     book.get("pages")),
+                "isbn":      first_nonempty(selected.get("isbn"),      enriched.get("isbn"),      book.get("isbn","")),
+                "cover_url": first_nonempty(selected.get("cover_url"), enriched.get("cover_url"), book.get("cover_url","")),
+                "work_id":   first_nonempty(selected.get("work_id"),   book.get("work_id","")),
+                "genre":     first_nonempty(enriched.get("genre"), ""),  # genre only comes from enrich (usually)
+                "author_gender": first_nonempty(enriched.get("author_gender"), ""),
+                "fiction_nonfiction": first_nonempty(enriched.get("fiction_nonfiction"), ""),
+                "tags":      first_nonempty(enriched.get("tags"), []),
+            }
+
             # Start the form inside the expander
             with st.form(key=f"form_{work_olid}_{idx}"):
-                isbn_val = st.session_state.get(f"isbn_{idx}", book.get("isbn", ""))
-                cover_src = st.session_state.get(f"cover_{idx}", book.get("cover_url", ""))
-
+                isbn_val = combined["isbn"]
+                cover_src = combined["cover_url"]
+            
                 # Cache or download cover if possible
-                local_cover = get_cached_or_drive_cover({"isbn": book.get("isbn", ""), "cover_url": book.get("cover_url", "")})
-
-                if local_cover and os.path.exists(local_cover):
-                    st.image(local_cover, use_column_width=True)
+                local_cover = get_cached_or_drive_cover({"isbn": isbn_val, "cover_url": cover_src})
+                if isinstance(local_cover, str) and os.path.exists(local_cover):
+                    st.image(local_cover, width=250)
+                elif cover_src.startswith("http"):
+                    st.image(cover_src, width=250)
                 else:
                     st.caption("No cover available")
-                    
-                # Show metadata
-                st.write(f"**Title:** {book_title}")
-                st.write(f"**Author:** {book_author}")
-                st.write(f"**Publisher:** {meta.get('publisher') or book.get('publisher', '')}")
-                st.write(f"**Year:** {meta.get('pub_year') or book.get('pub_year', '')}")
-                st.write(f"**Pages:** {meta.get('pages') or book.get('pages', '')}")
-                st.write(f"**ISBN:** {st.session_state.get(f'isbn_{idx}', book.get('isbn', ''))}")
-                st.write(f"**Genre:** {meta.get('genre', '')}")
-
-
+            
+                # Prefilled (you can switch to text_input if you want them editable)
+                st.write(f"**Title:** {combined['title']}")
+                st.write(f"**Author:** {combined['author']}")
+                st.write(f"**Publisher:** {combined['publisher']}")
+                st.write(f"**Year:** {combined['pub_year']}")
+                st.write(f"**Pages:** {combined['pages']}")
+                st.write(f"**ISBN:** {isbn_val}")
+            
                 # Form inputs
                 gender_options = ["", "Male", "Female", "Nonbinary", "Multiple", "Unknown"]
                 author_gender = st.selectbox(
                     "Author Gender",
                     gender_options,
-                    index=gender_options.index(meta.get("author_gender", "")) if meta.get("author_gender", "") in gender_options else 0,
+                    index=gender_options.index(combined.get("author_gender","")) if combined.get("author_gender","") in gender_options else 0,
                 )
-
+            
                 fiction_options = ["", "Fiction", "Non-fiction"]
                 fiction = st.selectbox(
                     "Fiction or Non-fiction",
                     fiction_options,
-                    index=fiction_options.index(meta.get("fiction_nonfiction", "")) if meta.get("fiction_nonfiction", "") in fiction_options else 0,
+                    index=fiction_options.index(combined.get("fiction_nonfiction","")) if combined.get("fiction_nonfiction","") in fiction_options else 0,
                 )
-                
-                raw_tags = meta.get("tags", [])
-                # normalize to list[str]
-                if raw_tags is None:
-                    raw_tags = []
-                elif isinstance(raw_tags, str):
+            
+                raw_tags = combined.get("tags") or []
+                if isinstance(raw_tags, str):
                     raw_tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
                 elif isinstance(raw_tags, (set, tuple)):
                     raw_tags = list(raw_tags)
-
-                tags_default = ", ".join([str(t) for t in raw_tags])
-
+                tags_default = ", ".join(map(str, raw_tags)) if raw_tags else ""
                 tags = st.text_input("Tags (comma-separated)", value=tags_default)
+            
                 date = st.date_input("Date Finished")
+            
+                colA, colB = st.columns(2)
+                enrich_clicked = colA.form_submit_button("🔍 Enrich to fill missing")
+                submitted      = colB.form_submit_button("Add this book")
 
-                submitted = st.form_submit_button("Add this book")
 
                 if submitted:
                     isbn_val = st.session_state.get(f"isbn_{idx}", book.get("isbn", ""))
