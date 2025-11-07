@@ -147,27 +147,41 @@ if st.session_state.search_results:
                     
                         # ✅ Move the button INSIDE the loop
                         unique_key = f"use_{work_olid}_{idx}_{j}"
+
+                        # 🟩 When clicked, immediately persist full edition data
                         if st.button("➕ Use This Edition", key=unique_key):
-                            # Parse year helper unchanged...
-                            def extract_year(s):
-                                import re
-                                if not s:
-                                    return ""
-                                m = re.search(r"(18|19|20)\d{2}", str(s))
-                                return int(m.group(0)) if m else ""
+                            # pull all edition fields right now
+                            title_val = ed.get("title", "") or book.get("title", "")
+                            author_val = ed.get("authors", "") or book.get("author", "")
+                            publisher_val = ed.get("publisher", "")
+                            pub_date_val = ed.get("publish_date", "")
+                            pages_val = ed.get("pages")
+                            isbn_val = ed.get("isbn", "") or book.get("isbn", "")
+                            cover_val = ed.get("cover_url", "") or book.get("cover_url", "")
                         
-                            data = {
-                                "title": ed.get("title", "") or book.get("title", ""),
-                                "author": ed.get("authors", "") or book.get("author", ""),
-                                "publisher": ed.get("publisher", ""),
-                                "pub_year": extract_year(ed.get("publish_date", "")),
-                                "pages": ed.get("pages"),
-                                "isbn": ed.get("isbn", "") or book.get("isbn", ""),
-                                "cover_url": ed.get("cover_url", "") or book.get("cover_url", ""),
+                            # helper to pull a year integer from publish_date
+                            import re
+                            year_match = re.search(r"(18|19|20)\d{2}", str(pub_date_val))
+                            pub_year_val = int(year_match.group(0)) if year_match else ""
+                        
+                            # build and persist immediately
+                            selection = {
+                                "title": title_val,
+                                "author": author_val,
+                                "publisher": publisher_val,
+                                "pub_year": pub_year_val,
+                                "pages": pages_val,
+                                "isbn": isbn_val,
+                                "cover_url": cover_val,
                                 "work_id": work_olid,
                             }
-                            persist_selection(work_olid, data)
+                        
+                            # save directly to session — use work_olid key (stable)
+                            st.session_state[f"selected_work_{work_olid}"] = selection
+                            st.session_state["last_selected_work"] = work_olid
+                        
                             st.success("✔️ Edition selected. You can now review/edit and then Enrich to fill gaps.")
+
 
 
             # Enrich
