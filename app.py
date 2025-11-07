@@ -90,6 +90,21 @@ if st.session_state.search_results:
         author = book.get("author", "")
         cover = book.get("cover_url", "")
 
+        # restore any previously selected edition data for this result
+        selected = st.session_state.get(f"selected_{idx}", {})
+        if selected:
+            # merge the edition info into the base book so it shows even after rerun
+            book.update({
+                "title": selected.get("title") or book.get("title", ""),
+                "author": selected.get("author") or book.get("author", ""),
+                "publisher": selected.get("publisher") or book.get("publisher", ""),
+                "pub_year": selected.get("pub_year") or book.get("pub_year", ""),
+                "pages": selected.get("pages") or book.get("pages", ""),
+                "isbn": selected.get("isbn") or book.get("isbn", ""),
+                "cover_url": selected.get("cover_url") or book.get("cover_url", ""),
+                "work_id": selected.get("work_id") or book.get("work_id", ""),
+            })
+
         with st.expander(f"**{title}** by {author}"):
             if cover and isinstance(cover, str) and cover.startswith("http"):
                 st.image(cover, width=250)  # smaller, natural size
