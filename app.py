@@ -266,20 +266,21 @@ if st.session_state.search_results:
                             st.warning(f"Failed to upload cover for {isbn_val}; keeping original cover URL")
 
                     book_data = {
-                        "title": meta.get("title") or book.get("title", ""),
-                        "author": meta.get("author") or book.get("author", ""),
-                        "publisher": meta.get("publisher") or book.get("publisher", ""),
-                        "pub_year": meta.get("pub_year") or book.get("pub_year", ""),
-                        "pages": meta.get("pages") or book.get("pages"),
-                        "genre": meta.get("genre", ""),
+                        "title": combined.get("title", ""),
+                        "author": combined.get("author", ""),
+                        "publisher": combined.get("publisher", ""),
+                        "pub_year": combined.get("pub_year", ""),
+                        "pages": combined.get("pages"),
+                        "genre": combined.get("genre", ""),
                         "author_gender": author_gender,
                         "fiction_nonfiction": fiction,
                         "tags": tags,
                         "date_finished": date.strftime("%Y-%m"),
                         "cover_url": cover_src,
-                        "openlibrary_id": book.get("work_id", ""),
-                        "isbn": isbn_val,
+                        "openlibrary_id": combined.get("work_id", ""),
+                        "isbn": combined.get("isbn", ""),
                     }
+
                     book_data["word_count"] = book_data["pages"] * 250 if book_data["pages"] else None
                     add_book(book_data)
                     st.session_state.edit_message = f"Book '{book.get('title','Untitled')}' added!"
