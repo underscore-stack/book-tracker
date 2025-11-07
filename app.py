@@ -92,7 +92,9 @@ if st.session_state.search_results:
 
         with st.expander(f"**{title}** by {author}"):
             if cover and isinstance(cover, str) and cover.startswith("http"):
-                st.image(cover, width=80)
+                st.image(cover, width=250)  # smaller, natural size
+            else:
+                st.caption("No cover")
             if st.button("📚 View Editions", key=f"editions_{work_olid}_{idx}"):
                 st.session_state[f"selected_work_{idx}"] = work_olid
                 editions = fetch_editions_for_work(work_olid)  # limit + english filter
