@@ -814,42 +814,52 @@ else:
                                 enrich_clicked = st.form_submit_button("🔍 Enrich Metadata")
 
                                 if enrich_clicked:
+                                    # Use combined values as "existing" so enrichment ONLY fills what's missing.
                                     existing = {
-                                        "publisher": new_publisher,
-                                        "pub_year": new_pub_year,
-                                        "pages": new_pages,
-                                        "genre": new_genre,
-                                        "fiction_nonfiction": new_fiction,
-                                        "author_gender": new_gender,
-                                        "tags": [t.strip() for t in new_tags.split(",") if t.strip()],
-                                        "isbn": new_isbn,
-                                        "cover_url": cover_url,
+                                        "publisher": combined["publisher"],
+                                        "pub_year":  combined["pub_year"],
+                                        "pages":     combined["pages"],
+                                        "genre":     combined["genre"],
+                                        "fiction_nonfiction": combined["fiction_nonfiction"],
+                                        "author_gender":      combined["author_gender"],
+                                        "tags":      raw_tags,
+                                        "isbn":      combined["isbn"],
+                                        "cover_url": combined["cover_url"],
                                     }
+                                    enriched = enrich_book_metadata(combined["title"], combined["author"], combined["isbn"], existing=existing)
+                            
+                                    # Store the enrichment so 'combined' shows it on next rerun (without overwriting selected fields)
+                                    st.session_state[f"enriched_{idx}"] = enriched or {}
+                                    st.rerun()
 
-                                    enriched = enrich_book_metadata(new_title, new_author, new_isbn, existing=existing)
-
-                                    if "error" in enriched:
-                                        st.warning(f"Enrichment failed: {enriched['error']}")
-                                    else:
-                                        st.session_state[f"edit_enriched_{book_id}"] = enriched
-                                        st.rerun()
 
                                 if submitted:
-                                    update_book_metadata_full(
-                                        book_id,
-                                        new_title,
-                                        new_author,
-                                        new_publisher,
-                                        int(new_pub_year) if new_pub_year else None,
-                                        int(new_pages) if new_pages else None,
-                                        new_genre,
-                                        new_gender,
-                                        new_fiction,
-                                        new_tags,
-                                        new_date.strftime("%Y-%m"),
-                                        new_isbn,
-                                        new_olid,
-                                    )
-                                    st.session_state.edit_message = f"Book '{new_title}' updated!"
-                                    st.session_state[f"edit_{book_id}"] = False
+                                    # Try saving the cover to Drive using ISBN + current cover
+                                    cover_src_to_save = combined["cover_url"]
+                                    if cover_src_to_save and combined["isbn"]:
+                                        drive_url = save_cover_to_drive(cover_src_to_save, combined["isbn"])
+                                        if drive_url:
+                                            cover_src_to_save = drive_url
+                                        else:
+                                            st.warning(f"Failed to upload cover for {combined['isbn']}; keeping original cover URL")
+                            
+                                    book_data = {
+                                        "title": combined["title"],
+                                        "author": combined["author"],
+                                        "publisher": combined["publisher"],
+                                        "pub_year": combined["pub_year"],
+                                        "pages": combined["pages"],
+                                        "genre": combined["genre"],
+                                        "author_gender": author_gender,
+                                        "fiction_nonfiction": fiction,
+                                        "tags": tags,
+                                        "date_finished": date.strftime("%Y-%m"),
+                                        "cover_url": cover_src_to_save,
+                                        "openlibrary_id": combined.get("work_id",""),
+                                        "isbn": combined["isbn"],
+                                    }
+                                    book_data["word_count"] = book_data["pages"] * 250 if book_data["pages"] else None
+                                    add_book(book_data)
+                                    st.session_state.edit_message = f"Book '{combined['title'] or 'Untitled'}' added!"
                                     st.rerun()
+
