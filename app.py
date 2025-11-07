@@ -2,6 +2,8 @@ import json
 import os
 import re
 import uuid
+import streamlit.components.v1 as components
+
 from collections import defaultdict
 from datetime import datetime
 
@@ -14,17 +16,18 @@ from db_google import add_book, delete_book, get_all_books, update_book_metadata
 from enrichment import enrich_book_metadata
 from openlibrary_new import search_works, fetch_editions_for_work
 
+def scroll_to_bottom():
+    """Smooth scroll to bottom after selecting an edition."""
+    js = """
+    <script>
+        window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+    </script>
+    """
+    components.html(js, height=0, width=0)
+
+
 st.set_page_config(page_title="Book Tracker", layout="wide")
 st.title("📚 Book Tracker")
-# --- TEMP DEBUG ---
-st.sidebar.header("🧪 Debug panel (temporary)")
-st.sidebar.write("Session keys:", list(st.session_state.keys()))
-if "pending_selection" in st.session_state:
-    st.sidebar.write("pending_selection →", st.session_state["pending_selection"])
-for k, v in st.session_state.items():
-    if k.startswith("selected_") or k.startswith("selected_work_"):
-        st.sidebar.write(f"{k} →", v)
-# --- END DEBUG ---
 
 # --- Handle pending edition selection from last click ---
 if "pending_selection" in st.session_state:
@@ -180,6 +183,8 @@ if st.session_state.search_results:
                             "work_id": work_olid,
                         }
                         st.toast("✅ Edition selected")
+                        scroll_to_bottom()
+
 
 
 
@@ -197,12 +202,31 @@ if st.session_state.search_results:
                     "tags": meta.get("tags", []),
                     "cover_url": book.get("cover_url"),
                 }
-                enriched = enrich_book_metadata(book.get("title", ""), book.get("author", ""), book.get("isbn"), existing=existing)
+                if enrich_clicked:
+                    existing = {
+                        "publisher": combined.get("publisher"),
+                        "pub_year": combined.get("pub_year"),
+                        "pages": combined.get("pages"),
+                        "genre": combined.get("genre"),
+                        "fiction_nonfiction": combined.get("fiction_nonfiction"),
+                        "author_gender": combined.get("author_gender"),
+                        "tags": combined.get("tags"),
+                        "isbn": combined.get("isbn"),
+                        "cover_url": combined.get("cover_url"),
+                    }
+                    enriched = enrich_book_metadata(
+                        combined["title"],
+                        combined["author"],
+                        combined.get("isbn"),
+                        existing=existing,
+                    )
+                    if "error" in enriched:
+                        st.error(f"Enrichment failed: {enriched['error']}")
+                    else:
+                        st.session_state[f"enriched_{idx}"] = enriched
+                        st.success("Metadata enriched.")
+                        st.rerun()
 
-                if "error" in enriched:
-                    st.error(f"Enrichment failed: {enriched['error']}")
-                else:
-                    st.session_state[f"enriched_{idx}"] = enriched
 
             # Make sure we pull the latest selected edition info
             meta = st.session_state.get(f"enriched_{idx}", {}) or {}
