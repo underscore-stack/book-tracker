@@ -138,44 +138,48 @@ if st.session_state.search_results:
                 st.image(cover, width=250)  # smaller, natural size
             else:
                 st.caption("No cover")
-            if st.button("📚 View Editions", key=f"editions_{work_olid}_{idx}"):
-                st.session_state[f"selected_work_{idx}"] = work_olid
-                editions = fetch_editions_for_work(work_olid)  # limit + english filter
                 
-                if not editions:
-                    st.warning("No English editions found.")
-                else:
-                    st.markdown("### Editions")
-                    for j, ed in enumerate(editions[:10]):
-                        title = ed.get("title", "Untitled")
-                        author = ed.get("authors", "Unknown Author")
-                        pub_date = ed.get("publish_date", "N/A")
-                        publisher = ed.get("publisher", "N/A")
-                        isbn = ed.get("isbn", "N/A")
-                    
-                        st.markdown(
-                            f"**{title}** — *{author}*  \n"
-                            f"📅 {pub_date} 🏢 {publisher} 📖 ISBN: {isbn}"
-                        )
-                    
-                        # Optional small cover preview
-                        cu = ed.get("cover_url", "")
-                        if cu and cu.startswith("http"):
-                            st.image(cu, width=80)
-                    
-                        import hashlib
-                        
-                        edition_key = f"{work_olid}_{idx}_{j}"
-                        hash_key = hashlib.sha1(edition_key.encode()).hexdigest()[:10]
-                        
-                        st.caption(f"DEBUG button key → use_btn_{hash_key}")
-                        clicked = st.button("➕ Use This Edition", key=f"use_btn_{hash_key}")
-                        
-                        if clicked:
-                            st.toast(f"Clicked edition for {work_olid}")
-                            print(">>> BUTTON EXECUTED for", work_olid)
-                            st.session_state["last_click_debug"] = {"work": work_olid, "key": hash_key}
-
+            # --- View Editions section ---
+            view_key = f"view_{work_olid}_{idx}"
+            
+            # When the user clicks "View Editions", fetch and store editions once
+            if st.button("📚 View Editions", key=view_key):
+                st.session_state[f"editions_for_{work_olid}"] = fetch_editions_for_work(work_olid)
+            
+            # Always render editions if they exist in session
+            editions = st.session_state.get(f"editions_for_{work_olid}", [])
+            
+            if editions:
+                st.markdown("### Editions")
+                for j, ed in enumerate(editions[:10]):
+                    title = ed.get("title", "Untitled")
+                    author = ed.get("authors", "Unknown Author")
+                    pub_date = ed.get("publish_date", "N/A")
+                    publisher = ed.get("publisher", "N/A")
+                    isbn = ed.get("isbn", "N/A")
+            
+                    st.markdown(
+                        f"**{title}** — *{author}*  \n"
+                        f"📅 {pub_date} 🏢 {publisher} 📖 ISBN: {isbn}"
+                    )
+            
+                    cu = ed.get("cover_url", "")
+                    if cu and cu.startswith("http"):
+                        st.image(cu, width=80)
+            
+                    # --- this button will now persist ---
+                    if st.button("➕ Use This Edition", key=f"use_{work_olid}_{j}"):
+                        st.session_state[f"selected_work_{work_olid}"] = {
+                            "title": ed.get("title", ""),
+                            "author": ed.get("authors", ""),
+                            "publisher": ed.get("publisher", ""),
+                            "pub_year": ed.get("publish_date", ""),
+                            "pages": ed.get("pages"),
+                            "isbn": ed.get("isbn", ""),
+                            "cover_url": ed.get("cover_url", ""),
+                            "work_id": work_olid,
+                        }
+                        st.toast("✅ Edition selected")
 
 
 
