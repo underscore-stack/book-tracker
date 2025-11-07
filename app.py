@@ -849,7 +849,10 @@ else:
                                 fiction_index = fiction_options.index(meta.get("fiction_nonfiction", fiction)) if meta.get("fiction_nonfiction", fiction) in fiction_options else 0
                                 new_fiction = st.selectbox("Fiction or Non-fiction", fiction_options, index=fiction_index)
 
-                                new_tags = st.text_input("Tags (comma-separated)", value=", ".join(meta.get("tags", tags.split(",") if tags else [])))
+                                meta = meta if isinstance(meta, dict) else {}
+                                tag_source = meta.get("tags") or (tags.split(",") if tags else [])
+                                new_tags = st.text_input("Tags (comma-separated)", value=", ".join(t.strip() for t in tag_source if t.strip()))
+
                                 try:
                                     date_default = datetime.strptime(date_str, "%Y-%m")
                                 except Exception:
@@ -892,31 +895,34 @@ else:
 
                                 if submitted:
                                     # Try saving the cover to Drive using ISBN + current cover
-                                    cover_src_to_save = combined["cover_url"]
-                                    if cover_src_to_save and combined["isbn"]:
-                                        drive_url = save_cover_to_drive(cover_src_to_save, combined["isbn"])
+                                    cover_src_to_save = cover_url
+                                    if cover_src_to_save and new_isbn:
+                                        drive_url = save_cover_to_drive(cover_src_to_save, new_isbn)
                                         if drive_url:
                                             cover_src_to_save = drive_url
                                         else:
-                                            st.warning(f"Failed to upload cover for {combined['isbn']}; keeping original cover URL")
-                            
+                                            st.warning(f"Failed to upload cover for {new_isbn}; keeping original cover URL")
+                                
+                                    # Build the record directly from form fields
                                     book_data = {
-                                        "title": combined["title"],
-                                        "author": combined["author"],
-                                        "publisher": combined["publisher"],
-                                        "pub_year": combined["pub_year"],
-                                        "pages": combined["pages"],
-                                        "genre": combined["genre"],
+                                        "title": new_title,
+                                        "author": new_author,
+                                        "publisher": new_publisher,
+                                        "pub_year": new_pub_year,
+                                        "pages": new_pages,
+                                        "genre": new_genre,
                                         "author_gender": author_gender,
                                         "fiction_nonfiction": fiction,
-                                        "tags": tags,
+                                        "tags": new_tags,
                                         "date_finished": date.strftime("%Y-%m"),
                                         "cover_url": cover_src_to_save,
-                                        "openlibrary_id": combined.get("work_id",""),
-                                        "isbn": combined["isbn"],
+                                        "openlibrary_id": book.get("work_id", ""),
+                                        "isbn": new_isbn,
                                     }
                                     book_data["word_count"] = book_data["pages"] * 250 if book_data["pages"] else None
+                                
                                     add_book(book_data)
-                                    st.session_state.edit_message = f"Book '{combined['title'] or 'Untitled'}' added!"
+                                    st.session_state.edit_message = f"Book '{new_title or 'Untitled'}' added!"
                                     st.rerun()
+
 
