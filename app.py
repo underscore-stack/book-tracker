@@ -32,7 +32,6 @@ months = {
     "09": "September", "10": "October", "11": "November", "12": "December"
 }
 
-# Group books by year/month
 grouped = defaultdict(lambda: defaultdict(list))
 for b in books:
     date_str = b.get("date_finished", "")
@@ -41,7 +40,7 @@ for b in books:
     year, month = date_str.split("-")[:2]
     grouped[year][month].append(b)
 
-# Find most recent month
+# Determine most recent month
 try:
     most_recent = max(
         datetime.strptime(b["date_finished"], "%Y-%m")
@@ -53,7 +52,7 @@ try:
 except Exception:
     most_recent_year = most_recent_month = None
 
-# Render grouped accordions
+# --- Render ---
 for year in sorted(grouped.keys(), reverse=True):
     year_total = sum(len(v) for v in grouped[year].values())
     with st.expander(f"📅 {year} ({year_total} books)", expanded=(year == most_recent_year)):
@@ -61,10 +60,27 @@ for year in sorted(grouped.keys(), reverse=True):
             month_books = grouped[year][month_code]
             month_name = months.get(month_code, month_code)
             month_label = f"{month_name} ({len(month_books)} books)"
+            key = f"{year}_{month_code}"
 
-            is_recent = (year == most_recent_year and month_code == most_recent_month)
+            # Initialize session toggle
+            if key not in st.session_state:
+                st.session_state[key] = (year == most_recent_year and month_code == most_recent_month)
 
-            with st.expander(month_label, expanded=is_recent):
+            # Toggle button row
+            cols = st.columns([0.05, 0.95])
+            with cols[0]:
+                arrow = "▼" if st.session_state[key] else "▶"
+                if st.button(arrow, key=f"toggle_{key}", help="Expand / collapse this month"):
+                    st.session_state[key] = not st.session_state[key]
+                    st.rerun()
+            with cols[1]:
+                st.markdown(f"**{month_label}**")
+
+            # Separator
+            st.markdown("<hr style='margin:2px 0;'>", unsafe_allow_html=True)
+
+            # Conditionally render books only when expanded
+            if st.session_state[key]:
                 for b in month_books:
                     cols = st.columns([1, 5])
                     with cols[0]:
@@ -78,6 +94,7 @@ for year in sorted(grouped.keys(), reverse=True):
                         st.caption(
                             f"{b.get('publisher','')} — {b.get('pub_year','')} — {b.get('pages','')} pages"
                         )
+
 
 # --- Charts (imported separately) ---
 show_charts(books)
