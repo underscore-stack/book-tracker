@@ -102,4 +102,4 @@ for y in sorted(grouped.keys(), reverse=True):
 # ---------- Charts ----------
 # If your charts module still uses st.expander, it’s fine because we use no expanders above.
 # If you prefer zero expanders everywhere, switch the expander in charts_view to a container/checkbox.
-show_charts(books)
+# show_charts(books)
