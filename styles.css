@@ -36,16 +36,3 @@ div[data-testid="stHorizontalBlock"] > div:nth-child(2) p {
 #add-book-area div[data-testid="stVerticalBlockBorderWrapper"] {
     margin-left: 2rem !important;
 
-/* Prevent wrapping and uneven row compression */
-[data-testid="column"] {
-  vertical-align: middle;
-}
-.stMarkdown p {
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-h4, h5 {
-  white-space: nowrap;
-}
