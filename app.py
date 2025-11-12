@@ -1,6 +1,7 @@
 # app.py — confirmed no expanders anywhere
 
 import os
+import time
 from datetime import datetime
 from collections import defaultdict
 import streamlit as st
@@ -8,6 +9,18 @@ from db_google import get_all_books
 from covers_google import get_cached_or_drive_cover
 from charts_view import show_charts  # keep commented until error gone
 
+def _get_client(retries=3, delay=1.0):
+    from google.oauth2.service_account import Credentials as SACreds
+    import gspread
+
+    for attempt in range(retries):
+        service_info = st.secrets.get("gcp_service_account")
+        if service_info:
+            creds = SACreds.from_service_account_info(service_info, scopes=SCOPES)
+            return gspread.authorize(creds)
+        time.sleep(delay)
+    raise RuntimeError("❌ Could not access [gcp_service_account] after retries.")
+    
 st.set_page_config(page_title="Book Tracker", layout="wide")
 st.title("📚 Book Tracker")
 
