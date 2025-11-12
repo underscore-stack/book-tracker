@@ -76,7 +76,7 @@ def add_book(book):
     return True
 
 def update_book_metadata_full(book_id, title, author, publisher, pub_year, pages, genre,
-                              gender, fiction, tags, date_finished, isbn, openlibrary_id):
+                              author_gender, fiction_nonfiction, tags, date_finished, openlibrary_id, isbn):
     sheet = _get_sheet()
     rows = sheet.get_all_records()
     for i, r in enumerate(rows, start=2):
@@ -101,7 +101,7 @@ def update_book_metadata_full(book_id, title, author, publisher, pub_year, pages
 
             values = [
                 book_id, title, author, publisher, pub_year, pages,
-                genre, gender, fiction, tags, date_finished,
+                genre, author_gender, fiction_nonfiction, tags, date_finished,
                 cover_url, openlibrary_id, isbn, word_count
             ]
 
