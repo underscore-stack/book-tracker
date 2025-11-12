@@ -9,18 +9,6 @@ from db_google import get_all_books
 from covers_google import get_cached_or_drive_cover
 from charts_view import show_charts  # keep commented until error gone
 
-def _get_client(retries=3, delay=1.0):
-    from google.oauth2.service_account import Credentials as SACreds
-    import gspread
-
-    for attempt in range(retries):
-        service_info = st.secrets.get("gcp_service_account")
-        if service_info:
-            creds = SACreds.from_service_account_info(service_info, scopes=SCOPES)
-            return gspread.authorize(creds)
-        time.sleep(delay)
-    raise RuntimeError("❌ Could not access [gcp_service_account] after retries.")
-    
 st.set_page_config(page_title="Book Tracker", layout="wide")
 st.title("📚 Book Tracker")
 
@@ -53,15 +41,12 @@ div[data-testid="stHorizontalBlock"] > div:nth-child(2) p {
 """, unsafe_allow_html=True)
 
 # ---------- Load data ----------
-try:
-    books = get_all_books()
-except Exception as e:
-    st.error(f"⚠️ Could not load books: {e}")
-    st.stop()
+@st.cache_data(show_spinner=False)
+def load_books():
+    from db_google import get_all_books
+    return get_all_books()
 
-if not books:
-    st.info("No books found in your Google Sheet.")
-    st.stop()
+books = load_books()
     
 # ---------- Session for detail view ----------
 if "selected_book" not in st.session_state:
