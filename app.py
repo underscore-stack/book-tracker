@@ -156,13 +156,13 @@ with st.form("book_search_form"):
     query = st.text_input("Search OpenLibrary (title or author)", key="add_query", placeholder="e.g., The Dead Zone")
     submitted = st.form_submit_button("Search")  # pressing Enter also submits
 
-if submitted and query.strip():
-    st.session_state["search_triggered"] = True
-    st.session_state["search_query"] = query.strip()
-    st.session_state["ol_results"] = ol_search_works(query.strip())
-    st.session_state["ol_selected_work"] = None
-    st.session_state["ol_editions"] = []
-    st.rerun()
+    if submitted and query.strip():
+        st.session_state["search_triggered"] = True
+        st.session_state["search_query"] = query.strip()
+        st.session_state["ol_results"] = ol_search_works(query.strip())
+        st.session_state["ol_selected_work"] = None
+        st.session_state["ol_editions"] = []
+        st.rerun()
 
 # ---- Results: Works ----
 if st.session_state["ol_results"] and not st.session_state["ol_selected_work"]:
