@@ -442,8 +442,8 @@ for y in sorted(grouped.keys(), reverse=True):
                                         )
                             
                                         # reload sheet data to show fresh values
-                                        from streamlit.runtime.caching import clear_cache
-                                        clear_cache()
+                                        st.cache_data.clear()
+                                        st.cache_resource.clear()
                                         books = get_all_books()
                                         # re-find this book by id
                                         updated = next((bk for bk in books if str(bk.get("id")) == str(b.get("id"))), None)
