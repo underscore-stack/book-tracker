@@ -240,7 +240,7 @@ if st.session_state["ol_selected_work"]:
                     st.rerun()
                 except Exception as e:
                     st.error(f"Failed to add book: {e}")
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # -------------------------------------
 # If last_added_id exists, open library
