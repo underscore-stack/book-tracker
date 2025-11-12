@@ -6,7 +6,7 @@ from collections import defaultdict
 import streamlit as st
 from db_google import get_all_books
 from covers_google import get_cached_or_drive_cover
-# from charts_view import show_charts  # keep commented until error gone
+from charts_view import show_charts  # keep commented until error gone
 
 st.set_page_config(page_title="Book Tracker", layout="wide")
 st.title("📚 Book Tracker")
