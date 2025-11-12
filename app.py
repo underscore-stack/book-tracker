@@ -390,7 +390,6 @@ for y in sorted(grouped.keys(), reverse=True):
                                 st.markdown(f"**OpenLibrary ID:** {b.get('openlibrary_id','')}")
                     
                             # --- New enrichment button ---
-                            st.write(b)
                             if st.button("🔍 Enrich Metadata", key=f"enrich_{detail_key}"):
                                 from enrichment import enrich_book_metadata
                                 from db_google import update_book_metadata_full, get_all_books
