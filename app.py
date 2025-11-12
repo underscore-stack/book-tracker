@@ -284,8 +284,6 @@ if not books:
 if "selected_book" not in st.session_state:
     st.session_state["selected_book"] = None
 
-# ---------- Charts ----------
-show_charts(books)
 
 # ---------- Library ----------
 st.header("📖 Library")
@@ -458,3 +456,5 @@ for y in sorted(grouped.keys(), reverse=True):
                                 st.session_state[detail_key] = False
                                 st.rerun()
 
+# ---------- Charts ----------
+show_charts(books)
