@@ -79,14 +79,42 @@ def update_book_metadata_full(book_id, title, author, publisher, pub_year, pages
                               gender, fiction, tags, date_finished, isbn, openlibrary_id):
     sheet = _get_sheet()
     rows = sheet.get_all_records()
-    for i, r in enumerate(rows, start=2):  # +1 header, +1 gspread index starts at 1
+    for i, r in enumerate(rows, start=2):
         if str(r["id"]) == str(book_id):
-            sheet.update(f"A{i}:N{i}", [[
+            cover_url = r.get("cover_url", "")
+            word_count = r.get("word_count", "")
+
+            # --- Normalize data types ---
+            # Try to make years and pages numeric
+            try:
+                pub_year = int(pub_year) if pub_year else ""
+            except ValueError:
+                pass
+            try:
+                pages = int(pages) if pages else ""
+            except ValueError:
+                pass
+
+            # date_finished should be text in YYYY-MM, but without an apostrophe
+            if isinstance(date_finished, str):
+                date_finished = date_finished.strip()
+
+            values = [
                 book_id, title, author, publisher, pub_year, pages,
-                genre, gender, fiction, tags, date_finished, r["cover_url"],
-                openlibrary_id, isbn, r.get("word_count", "")
-            ]])
+                genre, gender, fiction, tags, date_finished,
+                cover_url, openlibrary_id, isbn, word_count
+            ]
+
+            # --- Write to sheet ---
+            # Use RAW to preserve numeric and date-like values properly
+            sheet.update(
+                f"A{i}",
+                [values],
+                value_input_option="RAW"  # prevents the apostrophe prefix
+            )
             break
+
+
 
 def delete_book(book_id):
     sheet = _get_sheet()
