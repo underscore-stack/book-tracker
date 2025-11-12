@@ -7,7 +7,8 @@ from collections import defaultdict
 import streamlit as st
 from db_google import get_all_books
 from covers_google import get_cached_or_drive_cover
-from charts_view import show_charts  # keep commented until error gone
+from charts_view import show_charts  
+from enrichment import enrich_book_metadata
 
 st.set_page_config(page_title="Book Tracker", layout="wide")
 def local_css(file_name: str):
@@ -352,30 +353,87 @@ for y in sorted(grouped.keys(), reverse=True):
             
                     # --- Inline detail block ---
                     if st.session_state[detail_key]:
-                        with st.container():
-                            st.markdown("---")
-                            st.markdown(f"### {title}")
-                            st.caption(f"by {author}")
-                            cols_d = st.columns([1, 3])
-                            with cols_d[0]:
-                                if cover and os.path.exists(cover):
-                                    st.image(cover, width=180)
-                            with cols_d[1]:
-                                st.markdown(f"**Publisher:** {b.get('publisher','')}")
-                                st.markdown(f"**Publication Year:** {b.get('pub_year','')}")
-                                st.markdown(f"**Pages:** {b.get('pages','')}")
-                                st.markdown(f"**Genre:** {b.get('genre','')}")
-                                st.markdown(f"**Fiction / Non-fiction:** {b.get('fiction_nonfiction','')}")
-                                st.markdown(f"**Author Gender:** {b.get('author_gender','')}")
-                                st.markdown(f"**Tags:** {b.get('tags','')}")
-                                st.markdown(f"**Date Finished:** {b.get('date_finished','')}")
-                                st.markdown(f"**ISBN:** {b.get('isbn','')}")
-                                st.markdown(f"**Word Count:** {b.get('word_count','')}")
-                                st.markdown(f"**OpenLibrary ID:** {b.get('openlibrary_id','')}")
-            
-                            if st.button("Hide details", key=f"hide_{unique}"):
-                                st.session_state[detail_key] = False
-                                st.rerun()
+                    with st.container():
+                        st.markdown("---")
+                        st.markdown(f"### {title}")
+                        st.caption(f"by {author}")
+                
+                        cols_d = st.columns([1, 3])
+                        with cols_d[0]:
+                            if cover and os.path.exists(cover):
+                                st.image(cover, width=180)
+                        with cols_d[1]:
+                            st.markdown(f"**Publisher:** {b.get('publisher','')}")
+                            st.markdown(f"**Publication Year:** {b.get('pub_year','')}")
+                            st.markdown(f"**Pages:** {b.get('pages','')}")
+                            st.markdown(f"**Genre:** {b.get('genre','')}")
+                            st.markdown(f"**Fiction / Non-fiction:** {b.get('fiction_nonfiction','')}")
+                            st.markdown(f"**Author Gender:** {b.get('author_gender','')}")
+                            st.markdown(f"**Tags:** {b.get('tags','')}")
+                            st.markdown(f"**Date Finished:** {b.get('date_finished','')}")
+                            st.markdown(f"**ISBN:** {b.get('isbn','')}")
+                            st.markdown(f"**Word Count:** {b.get('word_count','')}")
+                            st.markdown(f"**OpenLibrary ID:** {b.get('openlibrary_id','')}")
+                
+                        # --- New enrichment button ---
+                        if st.button("🔍 Enrich Metadata", key=f"enrich_{detail_key}"):
+                            from enrichment import enrich_book_metadata
+                
+                            with st.spinner("Contacting ChatGPT to fill in missing info..."):
+                                existing = {
+                                    "publisher": b.get("publisher"),
+                                    "pub_year": b.get("pub_year"),
+                                    "pages": b.get("pages"),
+                                    "genre": b.get("genre"),
+                                    "fiction_nonfiction": b.get("fiction_nonfiction"),
+                                    "author_gender": b.get("author_gender"),
+                                    "tags": b.get("tags"),
+                                    "isbn": b.get("isbn"),
+                                    "cover_url": b.get("cover_url"),
+                                }
+                
+                                enriched = enrich_book_metadata(
+                                    b.get("title"),
+                                    b.get("author"),
+                                    b.get("isbn"),
+                                    existing=existing,
+                                )
+                
+                            if "error" in enriched:
+                                st.error(f"Enrichment failed: {enriched['error']}")
+                            else:
+                                # merge and update Google Sheet
+                                for k, v in enriched.items():
+                                    if v and not b.get(k):  # fill only missing
+                                        b[k] = v
+                
+                                from db_google import update_book_metadata_full
+                                try:
+                                    update_book_metadata_full(
+                                        b.get("id"),
+                                        b.get("title"),
+                                        b.get("author"),
+                                        b.get("publisher"),
+                                        b.get("pub_year"),
+                                        b.get("pages"),
+                                        b.get("genre"),
+                                        b.get("author_gender"),
+                                        b.get("fiction_nonfiction"),
+                                        b.get("tags"),
+                                        b.get("date_finished"),
+                                        b.get("isbn"),
+                                        b.get("openlibrary_id"),
+                                    )
+                                    st.success("✅ Missing metadata filled and saved.")
+                                    st.session_state[detail_key] = False
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Could not update Google Sheet: {e}")
+                
+                        if st.button("Hide details", key=f"hide_{unique}"):
+                            st.session_state[detail_key] = False
+                            st.rerun()
+
 
 
 
