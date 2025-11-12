@@ -165,7 +165,7 @@ with st.form("book_search_form"):
         st.rerun()
 
 # ---- Results: Works ----
-if st.session_state["ol_results"] and not st.session_state["ol_selected_work"]:
+if st.session_state.get("ol_results") and not st.session_state["ol_selected_work"]:
     st.markdown("<h4 style='margin-top:0.5em'>Top Matches</h4>", unsafe_allow_html=True)
     with st.container():
         st.markdown(
@@ -283,6 +283,10 @@ if not books:
 # ---------- Session for detail view ----------
 if "selected_book" not in st.session_state:
     st.session_state["selected_book"] = None
+
+
+# ---------- Charts ----------
+show_charts(books)
 
 
 # ---------- Library ----------
@@ -455,6 +459,3 @@ for y in sorted(grouped.keys(), reverse=True):
                             if st.button("Hide details", key=f"hide_{unique}"):
                                 st.session_state[detail_key] = False
                                 st.rerun()
-
-# ---------- Charts ----------
-show_charts(books)
