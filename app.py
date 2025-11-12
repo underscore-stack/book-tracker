@@ -245,7 +245,7 @@ if st.session_state["ol_selected_work"]:
                 }
                 try:
                     add_book(book_data)
-                    st.success(f"Added: {book_data['title']} ({now_ym})")
+                    st.success(f"Added: {book_data['title']} ({date_finished})")
 
                     # close search state and store ID
                     st.session_state["ol_results"] = []
