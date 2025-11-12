@@ -147,6 +147,7 @@ st.session_state.setdefault("last_added_id", None)
 
 # ---- UI ----
 st.markdown("### ➕ Add a Book")
+add_book_container = st.container()
 with add_book_container:
     st.markdown('<div id="add-book-area">', unsafe_allow_html=True)
     
