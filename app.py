@@ -82,60 +82,79 @@ for y in sorted(grouped.keys(), reverse=True):
 
             if st.session_state[m_key]:
                 for idx, b in enumerate(month_books):
-                    # Unique per book, even if ids are missing/duplicated
-                    book_id = b.get("id")
-                    unique = f"{y}_{m}_{idx}_{book_id or 'x'}"
-
+                    unique = f"{y}_{m}_{idx}_{b.get('id','x')}"
+                    detail_key = f"detail_open_{unique}"
+            
+                    # default collapsed
+                    if detail_key not in st.session_state:
+                        st.session_state[detail_key] = False
+            
                     cols = st.columns([1, 5])
                     with cols[0]:
                         cover = get_cached_or_drive_cover(b)
                         if isinstance(cover, str) and os.path.exists(cover):
-                            if st.button("🖼️", key=f"coverbtn_{unique}", help="Open book details"):
-                                st.session_state["selected_book"] = b
-                                st.rerun()
-                            st.image(cover, width=60)
+                            # clickable image via form submit
+                            with st.form(key=f"coverform_{unique}"):
+                                st.image(cover, width=60)
+                                if st.form_submit_button("", help="View details"):
+                                    st.session_state[detail_key] = not st.session_state[detail_key]
+                                    st.rerun()
                         else:
                             st.caption("No cover")
+            
                     with cols[1]:
                         title = b.get("title", "Untitled")
                         author = b.get("author", "Unknown")
-                        if st.button(title, key=f"titlebtn_{unique}", help="Open book details"):
-                            st.session_state["selected_book"] = b
-                            st.rerun()
+                        # clickable text link
+                        link_html = (
+                            f"<a href='javascript:void(0);' "
+                            f"style='text-decoration:underline; color:#1f77b4; font-weight:600;' "
+                            f"onClick=\"window.parent.postMessage({{'type':'click_{unique}'}}, '*')\">"
+                            f"{title}</a>"
+                        )
+                        st.markdown(link_html, unsafe_allow_html=True)
                         st.caption(f"*{author}*")
+            
+                        # JavaScript → Streamlit bridge
+                        st.markdown(
+                            f"""
+                            <script>
+                            window.addEventListener('message', (e) => {{
+                                if (e.data.type === 'click_{unique}') {{
+                                    window.parent.Streamlit.setComponentValue({{'key': '{detail_key}'}});
+                                }}
+                            }});
+                            </script>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+            
+                    # --- Inline detail panel ---
+                    if st.session_state[detail_key]:
+                        with st.container():
+                            st.markdown("---")
+                            st.markdown(f"### {title}")
+                            st.caption(f"by {author}")
+                            cols_d = st.columns([1, 3])
+                            with cols_d[0]:
+                                if cover and os.path.exists(cover):
+                                    st.image(cover, width=180)
+                            with cols_d[1]:
+                                st.markdown(f"**Publisher:** {b.get('publisher','')}")
+                                st.markdown(f"**Publication Year:** {b.get('pub_year','')}")
+                                st.markdown(f"**Pages:** {b.get('pages','')}")
+                                st.markdown(f"**Genre:** {b.get('genre','')}")
+                                st.markdown(f"**Fiction/Non-fiction:** {b.get('fiction_nonfiction','')}")
+                                st.markdown(f"**Author Gender:** {b.get('author_gender','')}")
+                                st.markdown(f"**Tags:** {b.get('tags','')}")
+                                st.markdown(f"**Date Finished:** {b.get('date_finished','')}")
+                                st.markdown(f"**ISBN:** {b.get('isbn','')}")
+                                st.markdown(f"**Word Count:** {b.get('word_count','')}")
+                                st.markdown(f"**OpenLibrary ID:** {b.get('openlibrary_id','')}")
+            
+                            if st.button("Hide details", key=f"hide_{unique}"):
+                                st.session_state[detail_key] = False
+                                st.rerun()
 
-
-# ---------- Book detail view ----------
-if st.session_state["selected_book"]:
-    b = st.session_state["selected_book"]
-    st.divider()
-    st.subheader(f"📖 {b.get('title','Untitled')}")
-    st.caption(f"by {b.get('author','Unknown')}")
-
-    cols = st.columns([1, 3])
-    with cols[0]:
-        cover = get_cached_or_drive_cover(b)
-        if isinstance(cover, str) and os.path.exists(cover):
-            st.image(cover, width=250)
-        else:
-            st.caption("No cover available")
-
-    with cols[1]:
-        st.markdown("### Book Details")
-        st.markdown(f"**Publisher:** {b.get('publisher','')}")
-        st.markdown(f"**Publication Year:** {b.get('pub_year','')}")
-        st.markdown(f"**Pages:** {b.get('pages','')}")
-        st.markdown(f"**Genre:** {b.get('genre','')}")
-        st.markdown(f"**Fiction/Non-fiction:** {b.get('fiction_nonfiction','')}")
-        st.markdown(f"**Author Gender:** {b.get('author_gender','')}")
-        st.markdown(f"**Tags:** {b.get('tags','')}")
-        st.markdown(f"**Date Finished:** {b.get('date_finished','')}")
-        st.markdown(f"**ISBN:** {b.get('isbn','')}")
-        st.markdown(f"**Word Count:** {b.get('word_count','')}")
-        st.markdown(f"**OpenLibrary ID:** {b.get('openlibrary_id','')}")
-
-    if st.button("⬅️ Back to Library"):
-        st.session_state["selected_book"] = None
-        st.rerun()
 
 show_charts(books)
