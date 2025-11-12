@@ -283,7 +283,10 @@ if not books:
 # ---------- Session for detail view ----------
 if "selected_book" not in st.session_state:
     st.session_state["selected_book"] = None
-    
+
+# ---------- Charts ----------
+show_charts(books)
+
 # ---------- Library ----------
 st.header("📖 Library")
 
@@ -454,8 +457,4 @@ for y in sorted(grouped.keys(), reverse=True):
                             if st.button("Hide details", key=f"hide_{unique}"):
                                 st.session_state[detail_key] = False
                                 st.rerun()
-    
 
-
-
-show_charts(books)
