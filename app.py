@@ -164,8 +164,6 @@ if submitted and query.strip():
     st.session_state["ol_editions"] = []
     st.rerun()
 
-if st.session_state.get("search_triggered") and st.session_state["ol_results"]:
-
 # ---- Results: Works ----
 if st.session_state["ol_results"] and not st.session_state["ol_selected_work"]:
     st.markdown("<h4 style='margin-top:0.5em'>Top Matches</h4>", unsafe_allow_html=True)
