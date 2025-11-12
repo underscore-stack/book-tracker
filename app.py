@@ -85,7 +85,6 @@ for y in sorted(grouped.keys(), reverse=True):
                     unique = f"{y}_{m}_{idx}_{b.get('id','x')}"
                     detail_key = f"detail_open_{unique}"
             
-                    # default collapsed
                     if detail_key not in st.session_state:
                         st.session_state[detail_key] = False
             
@@ -93,43 +92,22 @@ for y in sorted(grouped.keys(), reverse=True):
                     with cols[0]:
                         cover = get_cached_or_drive_cover(b)
                         if isinstance(cover, str) and os.path.exists(cover):
-                            # clickable image via form submit
-                            with st.form(key=f"coverform_{unique}"):
-                                st.image(cover, width=60)
-                                if st.form_submit_button("", help="View details"):
-                                    st.session_state[detail_key] = not st.session_state[detail_key]
-                                    st.rerun()
+                            st.image(cover, width=60)
                         else:
                             st.caption("No cover")
             
                     with cols[1]:
                         title = b.get("title", "Untitled")
                         author = b.get("author", "Unknown")
-                        # clickable text link
-                        link_html = (
-                            f"<a href='javascript:void(0);' "
-                            f"style='text-decoration:underline; color:#1f77b4; font-weight:600;' "
-                            f"onClick=\"window.parent.postMessage({{'type':'click_{unique}'}}, '*')\">"
-                            f"{title}</a>"
-                        )
-                        st.markdown(link_html, unsafe_allow_html=True)
+            
+                        # make the title look like a hyperlink but act as a toggle button
+                        link_label = f"🔗 {title}"
+                        if st.button(link_label, key=f"titlebtn_{unique}", help="Show / hide details"):
+                            st.session_state[detail_key] = not st.session_state[detail_key]
+                            st.rerun()
                         st.caption(f"*{author}*")
             
-                        # JavaScript → Streamlit bridge
-                        st.markdown(
-                            f"""
-                            <script>
-                            window.addEventListener('message', (e) => {{
-                                if (e.data.type === 'click_{unique}') {{
-                                    window.parent.Streamlit.setComponentValue({{'key': '{detail_key}'}});
-                                }}
-                            }});
-                            </script>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-            
-                    # --- Inline detail panel ---
+                    # --- Inline detail block ---
                     if st.session_state[detail_key]:
                         with st.container():
                             st.markdown("---")
@@ -144,7 +122,7 @@ for y in sorted(grouped.keys(), reverse=True):
                                 st.markdown(f"**Publication Year:** {b.get('pub_year','')}")
                                 st.markdown(f"**Pages:** {b.get('pages','')}")
                                 st.markdown(f"**Genre:** {b.get('genre','')}")
-                                st.markdown(f"**Fiction/Non-fiction:** {b.get('fiction_nonfiction','')}")
+                                st.markdown(f"**Fiction / Non-fiction:** {b.get('fiction_nonfiction','')}")
                                 st.markdown(f"**Author Gender:** {b.get('author_gender','')}")
                                 st.markdown(f"**Tags:** {b.get('tags','')}")
                                 st.markdown(f"**Date Finished:** {b.get('date_finished','')}")
@@ -155,6 +133,7 @@ for y in sorted(grouped.keys(), reverse=True):
                             if st.button("Hide details", key=f"hide_{unique}"):
                                 st.session_state[detail_key] = False
                                 st.rerun()
+
 
 
 show_charts(books)
