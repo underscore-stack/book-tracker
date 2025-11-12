@@ -157,12 +157,14 @@ with st.form("book_search_form"):
     submitted = st.form_submit_button("Search")  # pressing Enter also submits
 
 if submitted and query.strip():
-    try:
-        st.session_state["ol_results"] = ol_search_works(query.strip())
-        st.session_state["ol_selected_work"] = None
-        st.session_state["ol_editions"] = []
-    except Exception as e:
-        st.error(f"OpenLibrary search failed: {e}")
+    st.session_state["search_triggered"] = True
+    st.session_state["search_query"] = query.strip()
+    st.session_state["ol_results"] = ol_search_works(query.strip())
+    st.session_state["ol_selected_work"] = None
+    st.session_state["ol_editions"] = []
+    st.rerun()
+
+if st.session_state.get("search_triggered") and st.session_state["ol_results"]:
 
 # ---- Results: Works ----
 if st.session_state["ol_results"] and not st.session_state["ol_selected_work"]:
