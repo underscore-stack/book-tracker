@@ -251,7 +251,7 @@ if st.session_state.get("last_added_id"):
         f"<script>window.location.hash='#{st.session_state['last_added_id']}'</script>",
         unsafe_allow_html=True,
     )
- st.markdown('</div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------- Load data ----------
 try:
