@@ -10,6 +10,13 @@ from covers_google import get_cached_or_drive_cover
 from charts_view import show_charts  # keep commented until error gone
 
 st.set_page_config(page_title="Book Tracker", layout="wide")
+def local_css(file_name: str):
+    with open(file_name) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+# Load global stylesheet
+local_css("styles.css")
+
 st.title("📚 Book Tracker")
 
 # ---------------------------------
@@ -140,7 +147,9 @@ st.session_state.setdefault("last_added_id", None)
 
 # ---- UI ----
 st.markdown("### ➕ Add a Book")
-
+with add_book_container:
+    st.markdown('<div id="add-book-area">', unsafe_allow_html=True)
+    
 with st.form("book_search_form"):
     query = st.text_input("Search OpenLibrary (title or author)", key="add_query", placeholder="e.g., The Dead Zone")
     submitted = st.form_submit_button("Search")  # pressing Enter also submits
@@ -242,36 +251,7 @@ if st.session_state.get("last_added_id"):
         f"<script>window.location.hash='#{st.session_state['last_added_id']}'</script>",
         unsafe_allow_html=True,
     )
-
-
-
-st.markdown("""
-<style>
-/* Remove the border around Streamlit buttons styled as links */
-button[kind="secondary"] {
-    border: none !important;
-    box-shadow: none !important;
-    padding-left: 0 !important;
-    margin-bottom: -1rem
-}
-
-/* Ensure title (button) and author are aligned on the same left edge */
-div[data-testid="stHorizontalBlock"] > div:nth-child(2) {
-    display: flex;
-    flex-direction: column;
-}
-
-/* Reduce vertical gap between title and author */
-div[data-testid="stHorizontalBlock"] > div:nth-child(2) .stMarkdown + .stMarkdown {
-    margin-top: -0.4rem !important;
-}
-
-/* Also tighten default paragraph margins in Markdown inside that column */
-div[data-testid="stHorizontalBlock"] > div:nth-child(2) p {
-    margin-bottom: 0.1rem !important;
-}
-</style>
-""", unsafe_allow_html=True)
+ st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------- Load data ----------
 try:
