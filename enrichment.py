@@ -22,15 +22,12 @@ def clean_gpt_json(text: str) -> str:
 
 
 def enrich_book_metadata(title, author, isbn, existing=None):
-    """
-    Enriches missing metadata using Gemini 1.5 Flash (free tier).
-    """
+
     try:
-        import streamlit as st
         api_key = st.secrets["gemini"]["api_key"]
         genai.configure(api_key=api_key)
 
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-flash-latest")
 
         missing_fields = [k for k, v in (existing or {}).items() if not v]
         prompt = f"""
@@ -75,5 +72,6 @@ def enrich_book_metadata(title, author, isbn, existing=None):
     }
 
     return final
+
 
 
