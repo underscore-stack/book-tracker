@@ -41,12 +41,15 @@ div[data-testid="stHorizontalBlock"] > div:nth-child(2) p {
 """, unsafe_allow_html=True)
 
 # ---------- Load data ----------
-@st.cache_data(show_spinner=False)
-def load_books():
-    from db_google import get_all_books
-    return get_all_books()
+try:
+    books = get_all_books()
+except Exception as e:
+    st.error(f"⚠️ Could not load books: {e}")
+    st.stop()
 
-books = load_books()
+if not books:
+    st.info("No books found in your Google Sheet.")
+    st.stop()
     
 # ---------- Session for detail view ----------
 if "selected_book" not in st.session_state:
