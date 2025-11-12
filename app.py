@@ -435,8 +435,8 @@ for y in sorted(grouped.keys(), reverse=True):
                                             b.get("fiction_nonfiction"),
                                             b.get("tags"),
                                             b.get("date_finished"),
-                                            b.get("isbn"),
                                             b.get("openlibrary_id"),
+                                            b.get("isbn")                                           
                                         )
                                         st.success("✅ Missing metadata filled and saved.")
                                         st.session_state[detail_key] = False
