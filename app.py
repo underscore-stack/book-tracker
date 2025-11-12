@@ -212,18 +212,32 @@ if st.session_state["ol_selected_work"]:
 
             if cols[4].button("Add", key=f"add_ed_{uniq}"):
                 from db_google import add_book
-                now_ym = datetime.now().strftime("%Y-%m")
+                
+                # --- Normalize values before insert ---
+                pub_year = (ed.get("publish_date") or "")[:4]
+                try:
+                    pub_year = int(pub_year) if pub_year else ""
+                except ValueError:
+                    pass
+                
+                pages = ed.get("pages")
+                try:
+                    pages = int(pages) if pages else ""
+                except ValueError:
+                    pass
+                
+                date_finished = datetime.now().strftime("%Y-%m").strip()
                 book_data = {
                     "title": ed.get("title") or w["title"],
                     "author": w.get("author", ""),
                     "publisher": ed.get("publisher", ""),
-                    "pub_year": (ed.get("publish_date") or "")[:4],
-                    "pages": ed.get("pages"),
+                    "pub_year": pub_year,
+                    "pages": pages,
                     "genre": "",
                     "author_gender": "",
                     "fiction_nonfiction": "",
                     "tags": "",
-                    "date_finished": now_ym,
+                    "date_finished": date_finished,
                     "cover_url": ed.get("cover_url", ""),
                     "openlibrary_id": w["work_id"],
                     "isbn": ed.get("isbn", ""),
