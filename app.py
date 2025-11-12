@@ -81,13 +81,15 @@ for y in sorted(grouped.keys(), reverse=True):
             toggle(label, m_key, default=(y == RECENT_Y and m == RECENT_M))
 
             if st.session_state[m_key]:
+                # Build a unique suffix from title + date_finished + id
+                suffix = f"{b.get('id','x')}_{b.get('title','')[:10].replace(' ','_')}_{b.get('date_finished','')}"
                 for b in month_books:
                     book_id = b.get("id")
                     cols = st.columns([1, 5])
                     with cols[0]:
                         cover = get_cached_or_drive_cover(b)
                         if isinstance(cover, str) and os.path.exists(cover):
-                            if st.button("🖼️", key=f"cover_btn_{book_id}", help="Open book details"):
+                            if st.button("🖼️", key=f"coverbtn_{suffix}", help="Open book details"):
                                 st.session_state["selected_book"] = b
                                 st.rerun()
                             st.image(cover, width=60)
@@ -96,7 +98,7 @@ for y in sorted(grouped.keys(), reverse=True):
                     with cols[1]:
                         title = b.get("title", "Untitled")
                         author = b.get("author", "Unknown")
-                        if st.button(title, key=f"title_btn_{book_id}", help="Open book details"):
+                        if st.button(title, key=f"titlebtn_{suffix}", help="Open book details"):
                             st.session_state["selected_book"] = b
                             st.rerun()
                         st.caption(f"*{author}*")
