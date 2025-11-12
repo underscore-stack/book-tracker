@@ -393,8 +393,9 @@ for y in sorted(grouped.keys(), reverse=True):
                             st.write(b)
                             if st.button("🔍 Enrich Metadata", key=f"enrich_{detail_key}"):
                                 from enrichment import enrich_book_metadata
-                    
-                                with st.spinner("Contacting ChatGPT to fill in missing info..."):
+                                from db_google import update_book_metadata_full, get_all_books
+                            
+                                with st.spinner("Contacting Gemini to fill in missing info..."):
                                     existing = {
                                         "publisher": b.get("publisher"),
                                         "pub_year": b.get("pub_year"),
@@ -406,23 +407,19 @@ for y in sorted(grouped.keys(), reverse=True):
                                         "isbn": b.get("isbn"),
                                         "cover_url": b.get("cover_url"),
                                     }
-                    
+                            
                                     enriched = enrich_book_metadata(
-                                        b.get("title"),
-                                        b.get("author"),
-                                        b.get("isbn"),
-                                        existing=existing,
+                                        b.get("title"), b.get("author"), b.get("isbn"), existing=existing
                                     )
-                    
+                            
                                 if "error" in enriched:
                                     st.error(f"Enrichment failed: {enriched['error']}")
                                 else:
-                                    # merge and update Google Sheet
+                                    # fill missing fields only
                                     for k, v in enriched.items():
-                                        if v and not b.get(k):  # fill only missing
+                                        if v and not b.get(k):
                                             b[k] = v
-                    
-                                    from db_google import update_book_metadata_full
+                            
                                     try:
                                         update_book_metadata_full(
                                             b.get("id"),
@@ -437,13 +434,21 @@ for y in sorted(grouped.keys(), reverse=True):
                                             b.get("tags"),
                                             b.get("date_finished"),
                                             b.get("openlibrary_id"),
-                                            b.get("isbn")                                           
+                                            b.get("isbn"),
                                         )
+                            
+                                        # reload sheet data to show fresh values
+                                        books = get_all_books()
+                                        # re-find this book by id
+                                        updated = next((bk for bk in books if str(bk.get("id")) == str(b.get("id"))), None)
+                                        if updated:
+                                            b.update(updated)
+                            
                                         st.success("✅ Missing metadata filled and saved.")
-                                        st.session_state[detail_key] = False
-                                        st.rerun()
+                                        # keep panel open (no st.rerun)
                                     except Exception as e:
                                         st.error(f"Could not update Google Sheet: {e}")
+
                     
                             if st.button("Hide details", key=f"hide_{unique}"):
                                 st.session_state[detail_key] = False
