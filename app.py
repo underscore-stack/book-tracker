@@ -11,6 +11,34 @@ from charts_view import show_charts  # keep commented until error gone
 st.set_page_config(page_title="Book Tracker", layout="wide")
 st.title("📚 Book Tracker")
 
+st.markdown("""
+<style>
+/* Remove the border around Streamlit buttons styled as links */
+button[kind="secondary"] {
+    border: none !important;
+    box-shadow: none !important;
+    padding-left: 0 !important;
+}
+
+/* Ensure title (button) and author are aligned on the same left edge */
+div[data-testid="stHorizontalBlock"] > div:nth-child(2) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* Reduce vertical gap between title and author */
+div[data-testid="stHorizontalBlock"] > div:nth-child(2) .stMarkdown + .stMarkdown {
+    margin-top: -0.4rem !important;
+}
+
+/* Also tighten default paragraph margins in Markdown inside that column */
+div[data-testid="stHorizontalBlock"] > div:nth-child(2) p {
+    margin-bottom: 0.1rem !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ---------- Load data ----------
 try:
     books = get_all_books()
