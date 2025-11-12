@@ -1,0 +1,38 @@
+/* === General UI Cleanup === */
+
+/* Remove borders from link-style buttons */
+button[kind="secondary"] {
+    border: none !important;
+    box-shadow: none !important;
+    padding-left: 0 !important;
+}
+
+/* Align title and author on the same left edge and reduce spacing */
+div[data-testid="stHorizontalBlock"] > div:nth-child(2) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+div[data-testid="stHorizontalBlock"] > div:nth-child(2) .stMarkdown + .stMarkdown {
+    margin-top: -0.4rem !important;
+}
+div[data-testid="stHorizontalBlock"] > div:nth-child(2) p {
+    margin-bottom: 0.1rem !important;
+}
+
+/* === Scoped Add-Book Area Styling === */
+#add-book-area div[data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlock"] {
+    width: 50% !important;
+}
+#add-book-area div[data-testid="stVerticalBlockBorderWrapper"] p,
+#add-book-area div[data-testid="stVerticalBlockBorderWrapper"] span,
+#add-book-area div[data-testid="stVerticalBlockBorderWrapper"] button {
+    font-size: 0.9rem !important;
+    line-height: 1.2 !important;
+}
+#add-book-area div[data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlock"] > div {
+    margin-bottom: 0.25rem !important;
+}
+#add-book-area div[data-testid="stVerticalBlockBorderWrapper"] {
+    margin-left: 2rem !important;
+}
