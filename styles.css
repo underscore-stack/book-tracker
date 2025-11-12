@@ -35,4 +35,8 @@ div[data-testid="stHorizontalBlock"] > div:nth-child(2) p {
 }
 #add-book-area div[data-testid="stVerticalBlockBorderWrapper"] {
     margin-left: 2rem !important;
+
+div[data-testid="column"]:has(img) {
+    min-height: 90px;
+}
 }
