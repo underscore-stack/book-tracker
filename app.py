@@ -18,13 +18,13 @@ button[kind="secondary"] {
     border: none !important;
     box-shadow: none !important;
     padding-left: 0 !important;
+    margin-bottom: -1rem
 }
 
 /* Ensure title (button) and author are aligned on the same left edge */
 div[data-testid="stHorizontalBlock"] > div:nth-child(2) {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
 }
 
 /* Reduce vertical gap between title and author */
@@ -129,7 +129,7 @@ for y in sorted(grouped.keys(), reverse=True):
                         author = b.get("author", "Unknown")
             
                         # make the title look like a hyperlink but act as a toggle button
-                        link_label = f"🔗 {title}"
+                        link_label = f"{title}"
                         if st.button(link_label, key=f"titlebtn_{unique}", help="Show / hide details"):
                             st.session_state[detail_key] = not st.session_state[detail_key]
                             st.rerun()
