@@ -21,7 +21,11 @@ except Exception as e:
 if not books:
     st.info("No books found in your Google Sheet.")
     st.stop()
-
+    
+# ---------- Session for detail view ----------
+if "selected_book" not in st.session_state:
+    st.session_state["selected_book"] = None
+    
 # ---------- Library ----------
 st.header("📖 Library")
 
@@ -63,7 +67,7 @@ def toggle(label: str, key: str, default=False):
         st.markdown(f"**{label}**")
     st.markdown("<hr style='margin:2px 0;'>", unsafe_allow_html=True)
 
-# Render library
+# ---------- Library structure ----------
 for y in sorted(grouped.keys(), reverse=True):
     year_total = sum(len(v) for v in grouped[y].values())
     y_key = f"year_{y}"
@@ -78,17 +82,57 @@ for y in sorted(grouped.keys(), reverse=True):
 
             if st.session_state[m_key]:
                 for b in month_books:
+                    book_id = b.get("id")
                     cols = st.columns([1, 5])
                     with cols[0]:
                         cover = get_cached_or_drive_cover(b)
                         if isinstance(cover, str) and os.path.exists(cover):
+                            if st.button("🖼️", key=f"cover_btn_{book_id}", help="Open book details"):
+                                st.session_state["selected_book"] = b
+                                st.rerun()
                             st.image(cover, width=60)
                         else:
                             st.caption("No cover")
                     with cols[1]:
-                        st.markdown(f"**{b.get('title','Untitled')}**  \n*{b.get('author','Unknown')}*")
-                        st.caption(
-                            f"{b.get('publisher','')} — {b.get('pub_year','')} — {b.get('pages','')} pages"
-                        )
+                        title = b.get("title", "Untitled")
+                        author = b.get("author", "Unknown")
+                        if st.button(title, key=f"title_btn_{book_id}", help="Open book details"):
+                            st.session_state["selected_book"] = b
+                            st.rerun()
+                        st.caption(f"*{author}*")
+
+
+# ---------- Book detail view ----------
+if st.session_state["selected_book"]:
+    b = st.session_state["selected_book"]
+    st.divider()
+    st.subheader(f"📖 {b.get('title','Untitled')}")
+    st.caption(f"by {b.get('author','Unknown')}")
+
+    cols = st.columns([1, 3])
+    with cols[0]:
+        cover = get_cached_or_drive_cover(b)
+        if isinstance(cover, str) and os.path.exists(cover):
+            st.image(cover, width=250)
+        else:
+            st.caption("No cover available")
+
+    with cols[1]:
+        st.markdown("### Book Details")
+        st.markdown(f"**Publisher:** {b.get('publisher','')}")
+        st.markdown(f"**Publication Year:** {b.get('pub_year','')}")
+        st.markdown(f"**Pages:** {b.get('pages','')}")
+        st.markdown(f"**Genre:** {b.get('genre','')}")
+        st.markdown(f"**Fiction/Non-fiction:** {b.get('fiction_nonfiction','')}")
+        st.markdown(f"**Author Gender:** {b.get('author_gender','')}")
+        st.markdown(f"**Tags:** {b.get('tags','')}")
+        st.markdown(f"**Date Finished:** {b.get('date_finished','')}")
+        st.markdown(f"**ISBN:** {b.get('isbn','')}")
+        st.markdown(f"**Word Count:** {b.get('word_count','')}")
+        st.markdown(f"**OpenLibrary ID:** {b.get('openlibrary_id','')}")
+
+    if st.button("⬅️ Back to Library"):
+        st.session_state["selected_book"] = None
+        st.rerun()
 
 show_charts(books)
