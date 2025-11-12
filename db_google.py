@@ -80,6 +80,7 @@ def update_book_metadata_full(book_id, title, author, publisher, pub_year, pages
     sheet = _get_sheet()
     rows = sheet.get_all_records()
     for i, r in enumerate(rows, start=2):
+        print(f"Checking row {i}: sheet id={r.get('id')}  |  passed id={book_id}")
         if str(r["id"]) == str(book_id):
             cover_url = r.get("cover_url", "")
             word_count = r.get("word_count", "")
