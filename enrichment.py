@@ -5,17 +5,9 @@ import os
 import json
 import re
 import streamlit as st
-from openai import OpenAI
+import google.generativeai as genai
+from datetime import datetime
 from openlibrary_local import fetch_detailed_metadata
-
-# ✅ Prefer Streamlit secrets, fall back to environment variable
-api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-
-if not api_key:
-    st.warning("⚠️ OPENAI_API_KEY not found — enrichment disabled.")
-    client = None
-else:
-    client = OpenAI(api_key=api_key)
 
 def clean_gpt_json(text: str) -> str:
     """Strip markdown-style code fences and stray backticks before parsing."""
@@ -29,79 +21,45 @@ def clean_gpt_json(text: str) -> str:
     return text
 
 
-def enrich_book_metadata(title, author, isbn=None, existing=None):
-    existing = existing or {}
-    enriched = {}
-
-    # 1️⃣ Try OpenLibrary first
+def enrich_book_metadata(title, author, isbn, existing=None):
+    """
+    Enriches missing metadata using Gemini 1.5 Flash (free tier).
+    """
     try:
-        if isbn:
-            ol_data = fetch_detailed_metadata(isbn=isbn)
-            if ol_data and any(ol_data.get(k) for k in ["publisher", "pages", "subjects"]):
-                enriched = {
-                    "publisher": ol_data.get("publisher", ""),
-                    "pub_year": None,  # Not always available
-                    "pages": ol_data.get("pages"),
-                    "genre": ol_data.get("genre", ""),
-                    "fiction_nonfiction": (
-                        "Fiction"
-                        if "fiction" in ",".join(ol_data.get("subjects", [])).lower()
-                        else "Non-fiction"
-                    )
-                    if ol_data.get("subjects")
-                    else "",
-                    "author_gender": "",
-                    "tags": ol_data.get("subjects", [])[:5],
-                    "cover_url": ol_data.get("cover_url", ""),
-                }
-    except Exception as e:
-        print(f"⚠️ OpenLibrary enrichment failed: {e}")
+        import streamlit as st
+        api_key = st.secrets["gemini"]["api_key"]
+        genai.configure(api_key=api_key)
 
-    # 2️⃣ If missing core fields, use GPT enrichment
-    if not enriched.get("publisher") or not enriched.get("pages"):
+        model = genai.GenerativeModel("gemini-1.5-flash")
+
+        missing_fields = [k for k, v in (existing or {}).items() if not v]
         prompt = f"""
-Please return metadata for the book:
-- Title: {title}
-- Author: {author}
+        You are a book metadata specialist. Fill in ONLY missing metadata fields for:
+        Title: {title}
+        Author: {author}
+        ISBN: {isbn}
 
-Respond with *only raw JSON* (no backticks, no Markdown formatting) matching this structure:
+        Existing metadata:
+        {existing}
 
-{{
-  "publisher": "",
-  "pub_year": null,
-  "pages": null,
-  "genre": "",
-  "fiction_nonfiction": "",
-  "author_gender": "",
-  "tags": []
-}}
-"""
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": "You are a helpful book metadata enrichment assistant."},
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.4,
-            )
-            text = response.choices[0].message.content.strip()
-            print("🔍 GPT RAW RESPONSE:\n", text)
+        Provide a JSON object with fields: publisher, pub_year, pages, genre, fiction_nonfiction, author_gender, tags.
+        Do not repeat existing values.
+        """
 
-            # Always sanitize before parsing
-            cleaned = clean_gpt_json(text)
+        response = model.generate_content(prompt)
+        text = response.text.strip()
 
-            try:
-                gpt_data = json.loads(cleaned)
-            except json.JSONDecodeError as e:
-                print(f"⚠️ JSON parse failed ({e}). Cleaned text:\n{cleaned}")
-                gpt_data = {}
+        # Try to extract a JSON object safely
+        import json, re
+        match = re.search(r"\{.*\}", text, re.S)
+        if not match:
+            return {"error": "No JSON found in Gemini response"}
 
-            enriched = {**enriched, **gpt_data}
+        enriched = json.loads(match.group(0))
+        return enriched
 
-        except Exception as e:
-            print(f"⚠️ GPT enrichment failed: {e}")
-            enriched.setdefault("error", str(e))
+    except Exception as e:
+        return {"error": f"Gemini enrichment failed: {e}"}
 
     # 3️⃣ Merge with existing (preserve existing non-empty fields)
     final = {
@@ -117,4 +75,5 @@ Respond with *only raw JSON* (no backticks, no Markdown formatting) matching thi
     }
 
     return final
+
 
