@@ -11,10 +11,15 @@ button[kind="secondary"] {
 div[data-testid="stHorizontalBlock"] > div:nth-child(2) {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch !important;
 }
 div[data-testid="stHorizontalBlock"] > div:nth-child(2) .stMarkdown + .stMarkdown {
     margin-top: -0.4rem !important;
+    
+}
+
+[data-testid="stVegaLiteChart"] {
+  min-height: 220px !important;
 }
 div[data-testid="stHorizontalBlock"] > div:nth-child(2) p {
     margin-bottom: 0.1rem !important;
