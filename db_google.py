@@ -14,10 +14,19 @@ SCOPES = [
 
 @st.cache_resource(show_spinner=False)
 def _get_client():
-    # Fail fast if secrets truly missing; otherwise reuse the cached client
-    service_info = st.secrets["gcp_service_account"]
-    creds = SACreds.from_service_account_info(service_info, scopes=SCOPES)
-    return gspread.authorize(creds)
+    # Try Streamlit secrets first, fall back to env var if needed.
+    for _ in range(5):  # up to ~2.5 s total retry window
+        service_info = st.secrets.get("gcp_service_account")
+        if service_info:
+            creds = SACreds.from_service_account_info(service_info, scopes=SCOPES)
+            return gspread.authorize(creds)
+        # Optional environment fallback
+        env_json = os.environ.get("GCP_SERVICE_ACCOUNT_JSON")
+        if env_json:
+            creds = SACreds.from_service_account_info(json.loads(env_json), scopes=SCOPES)
+            return gspread.authorize(creds)
+        time.sleep(0.5)
+    raise RuntimeError("⚠️ Could not find gcp_service_account in Streamlit secrets after retries.")
 
 
 # --- CONFIG ---
