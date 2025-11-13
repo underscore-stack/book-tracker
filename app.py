@@ -1,86 +1,120 @@
-# app.py — confirmed no expanders anywhere
+# app.py — refactored with sidebar filters, no expanders
 
 import os
 import time
 from datetime import datetime
 from collections import defaultdict
+
+import requests
 import streamlit as st
-from db_google import get_all_books
+
+from db_google import get_all_books, update_book_metadata_full
 from covers_google import get_cached_or_drive_cover
-from charts_view import show_charts  
+from charts_view import show_charts
 from enrichment import enrich_book_metadata
 
+
+# ------------------------------------------------------------
+# BASIC SETUP
+# ------------------------------------------------------------
 st.set_page_config(page_title="Book Tracker", layout="wide")
-def local_css(file_name: str):
+
+
+def local_css(file_name: str) -> None:
+    """Load a local CSS file into the app."""
     with open(file_name) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
 
 # Load global stylesheet
 local_css("styles.css")
 
 st.title("📚 Book Tracker")
-# ---------- Load data ----------
-try:
-    books = get_all_books()
-except Exception as e:
-    st.error(f"⚠️ Could not load books: {e}")
-    st.stop()
-
-if not books:
-    st.info("No books found in your Google Sheet.")
-    st.stop()
 
 
-# ---------------------------------
-# SIDEBAR FILTERS
-# ---------------------------------
+# ------------------------------------------------------------
+# LOAD BOOKS
+# ------------------------------------------------------------
+def load_books():
+    try:
+        data = get_all_books()
+    except Exception as e:
+        st.error(f"⚠️ Could not load books: {e}")
+        st.stop()
+    if not data:
+        st.info("No books found in your Google Sheet.")
+        st.stop()
+    return data
+
+
+books = load_books()
+
+
+# ------------------------------------------------------------
+# SIDEBAR FILTERS (APPLY BUTTON)
+# ------------------------------------------------------------
 st.sidebar.header("Filter Library")
 
-# --- option lists ---
-years = sorted({b.get("date_finished", "")[:4] for b in books if b.get("date_finished")}, reverse=True)
-months = sorted({b.get("date_finished", "")[5:7] for b in books if b.get("date_finished")})
+# Build option lists from current data
+years = sorted(
+    {b.get("date_finished", "")[:4] for b in books if b.get("date_finished")},
+    reverse=True,
+)
+months = sorted(
+    {b.get("date_finished", "")[5:7] for b in books if b.get("date_finished")}
+)
 authors = sorted({b.get("author", "") for b in books if b.get("author")})
 titles = sorted({b.get("title", "") for b in books if b.get("title")})
 
-# --- Inputs ---
+# Inputs
 f_years = st.sidebar.multiselect("Year finished", years)
 f_months = st.sidebar.multiselect("Month finished", months)
 f_authors = st.sidebar.multiselect("Author", authors)
 f_titles = st.sidebar.multiselect("Title", titles)
 
+# Free-text partial matching
 f_genre = st.sidebar.text_input("Genre contains")
 f_tags = st.sidebar.text_input("Tags contain")
 
+# Type and gender
 f_type = st.sidebar.radio("Type", ["All", "Fiction", "Non-fiction"], index=0)
 f_gender = st.sidebar.multiselect("Author gender", ["Male", "Female", "Other"])
 
 apply_filters = st.sidebar.button("Apply Filters")
 
-# Storage
-if "filtered_books" not in st.session_state:
-    st.session_state["filtered_books"] = books
 
-if apply_filters:
+def apply_filter_logic(all_books):
+    """Return filtered list based on current sidebar selections."""
     filtered = []
-    for b in books:
-        df = b.get("date_finished", "")
+    for b in all_books:
+        df = b.get("date_finished", "") or ""
         yr = df[:4] if "-" in df else ""
         mo = df[5:7] if "-" in df else ""
 
+        # Year/month
         if f_years and yr not in f_years:
             continue
         if f_months and mo not in f_months:
             continue
-        if f_authors and b.get("author", "") not in f_authors:
+
+        # Author/title
+        if f_authors and (b.get("author", "") not in f_authors):
             continue
-        if f_titles and b.get("title", "") not in f_titles:
+        if f_titles and (b.get("title", "") not in f_titles):
             continue
+
+        # Genre/tags partial matches
         if f_genre and f_genre.lower() not in (b.get("genre") or "").lower():
             continue
         if f_tags and f_tags.lower() not in (b.get("tags") or "").lower():
             continue
-        if f_type != "All" and (b.get("fiction_nonfiction") or "") != f_type:
-            continue
+
+        # Fiction / Non-fiction
+        if f_type != "All":
+            if (b.get("fiction_nonfiction") or "") != f_type:
+                continue
+
+        # Author gender
         if f_gender:
             g = (b.get("author_gender") or "").capitalize()
             if g not in f_gender:
@@ -88,20 +122,31 @@ if apply_filters:
 
         filtered.append(b)
 
-    st.session_state["filtered_books"] = filtered
+    return filtered
 
-# Replace original
+
+# Maintain filtered_books in session
+if "filtered_books" not in st.session_state:
+    st.session_state["filtered_books"] = books
+
+if apply_filters:
+    st.session_state["filtered_books"] = apply_filter_logic(books)
+
 books = st.session_state["filtered_books"]
 
-# ---------------------------------
-# ADD BOOK SECTION (streamlined UI)
-# ---------------------------------
-import requests
-from operator import itemgetter
-from datetime import datetime
-import time
 
-DATE_FORMATS = ["%Y", "%b %d, %Y", "%B %d, %Y", "%Y-%m-%d", "%m/%d/%Y", "%B %Y", "%b %Y"]
+# ------------------------------------------------------------
+# OPENLIBRARY ADD-BOOK SECTION
+# ------------------------------------------------------------
+DATE_FORMATS = [
+    "%Y",
+    "%b %d, %Y",
+    "%B %d, %Y",
+    "%Y-%m-%d",
+    "%m/%d/%Y",
+    "%B %Y",
+    "%b %Y",
+]
 COVER_SIZE = "M"
 MAX_LIMIT = 1000
 SLEEP_TIME = 0.35
@@ -150,13 +195,15 @@ def ol_search_works(q: str):
     data = r.json()
     docs = data.get("docs", [])
     out = []
-    for d in docs[:TOP_RESULTS * 2]:
-        out.append({
-            "work_id": (d.get("key") or "").split("/")[-1],
-            "title": d.get("title") or d.get("title_suggest") or "Untitled",
-            "author": ", ".join(d.get("author_name", []) or []) or "Unknown",
-            "first_publish_year": d.get("first_publish_year") or "",
-        })
+    for d in docs[: TOP_RESULTS * 2]:
+        out.append(
+            {
+                "work_id": (d.get("key") or "").split("/")[-1],
+                "title": d.get("title") or d.get("title_suggest") or "Untitled",
+                "author": ", ".join(d.get("author_name", []) or []) or "Unknown",
+                "first_publish_year": d.get("first_publish_year") or "",
+            }
+        )
     return out[:TOP_RESULTS]
 
 
@@ -190,7 +237,7 @@ def ol_fetch_editions_sorted(work_id: str):
             ed["_sort_date"] = _parse_ol_date(ed.get("publish_date"))
             filtered.append(ed)
 
-    filtered_sorted = sorted(filtered, key=itemgetter("_sort_date"))
+    filtered_sorted = sorted(filtered, key=lambda e: e["_sort_date"])
 
     norm = []
     for ed in filtered_sorted[:TOP_RESULTS]:
@@ -201,15 +248,17 @@ def ol_fetch_editions_sorted(work_id: str):
             publisher = ", ".join(publishers)
         else:
             publisher = str(publishers or "")
-        norm.append({
-            "title": ed.get("title") or "Untitled",
-            "publish_date": ed.get("publish_date") or "",
-            "pages": ed.get("number_of_pages") or None,
-            "publisher": publisher,
-            "isbn": _first_isbn(ed),
-            "edition_key": edition_key,
-            "cover_url": cover_url,
-        })
+        norm.append(
+            {
+                "title": ed.get("title") or "Untitled",
+                "publish_date": ed.get("publish_date") or "",
+                "pages": ed.get("number_of_pages") or None,
+                "publisher": publisher,
+                "isbn": _first_isbn(ed),
+                "edition_key": edition_key,
+                "cover_url": cover_url,
+            }
+        )
     return norm
 
 
@@ -221,143 +270,172 @@ st.session_state.setdefault("last_added_id", None)
 
 # ---- UI ----
 st.markdown("### ➕ Add a Book")
+
 add_book_container = st.container()
 with add_book_container:
     st.markdown('<div id="add-book-area">', unsafe_allow_html=True)
-    
-with st.form("book_search_form"):
-    query = st.text_input("Search OpenLibrary (title or author)", key="add_query", placeholder="e.g., The Dead Zone")
-    submitted = st.form_submit_button("Search")  # pressing Enter also submits
 
-    if submitted and query.strip():
-        st.session_state["search_triggered"] = True
-        st.session_state["search_query"] = query.strip()
-        st.session_state["ol_results"] = ol_search_works(query.strip())
-        st.session_state["ol_selected_work"] = None
-        st.session_state["ol_editions"] = []
-        st.rerun()
+    # Search form
+    with st.form("book_search_form"):
+        query = st.text_input(
+            "Search OpenLibrary (title or author)",
+            key="add_query",
+            placeholder="e.g., The Dead Zone",
+        )
+        submitted = st.form_submit_button("Search")
 
-# ---- Results: Works ----
-if st.session_state.get("ol_results") and not st.session_state["ol_selected_work"]:
-    st.markdown("<h4 style='margin-top:0.5em'>Top Matches</h4>", unsafe_allow_html=True)
-    with st.container():
+        if submitted and query.strip():
+            try:
+                st.session_state["ol_results"] = ol_search_works(query.strip())
+                st.session_state["ol_selected_work"] = None
+                st.session_state["ol_editions"] = []
+            except Exception as e:
+                st.error(f"OpenLibrary search failed: {e}")
+            st.rerun()
+
+    # Results: Works
+    if st.session_state.get("ol_results") and not st.session_state["ol_selected_work"]:
         st.markdown(
-            "<div style='max-width:50%; font-size:0.9em;'>",
+            "<h4 style='margin-top:0.5em'>Top Matches</h4>", unsafe_allow_html=True
+        )
+        with st.container():
+            st.markdown(
+                "<div style='max-width:50%; font-size:0.9em;'>",
+                unsafe_allow_html=True,
+            )
+            for i, w in enumerate(st.session_state["ol_results"]):
+                key_suffix = f"{w['work_id']}_{i}"
+                cols = st.columns([5, 3, 2, 1])
+                cols[0].markdown(f"**{w['title']}**")
+                cols[1].markdown(w["author"])
+                cols[2].markdown(str(w["first_publish_year"] or ""))
+                if cols[3].button("Select", key=f"sel_work_{key_suffix}"):
+                    st.session_state["ol_selected_work"] = w
+                    try:
+                        st.session_state["ol_editions"] = ol_fetch_editions_sorted(
+                            w["work_id"]
+                        )
+                    except Exception as e:
+                        st.error(f"Fetching editions failed: {e}")
+                        st.session_state["ol_editions"] = []
+                    st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    # Results: Editions
+    if st.session_state["ol_selected_work"]:
+        w = st.session_state["ol_selected_work"]
+        st.markdown(
+            f"<h5 style='margin-top:1em'>Selected Work: <em>{w['title']}</em> — {w['author']}</h5>",
             unsafe_allow_html=True,
         )
-        for i, w in enumerate(st.session_state["ol_results"]):
-            key_suffix = f"{w['work_id']}_{i}"
-            cols = st.columns([5, 3, 2, 1])
-            cols[0].markdown(f"**{w['title']}**")
-            cols[1].markdown(w["author"])
-            cols[2].markdown(str(w["first_publish_year"] or ""))
-            if cols[3].button("Select", key=f"sel_work_{key_suffix}"):
-                st.session_state["ol_selected_work"] = w
-                try:
-                    st.session_state["ol_editions"] = ol_fetch_editions_sorted(w["work_id"])
-                except Exception as e:
-                    st.error(f"Fetching editions failed: {e}")
-                    st.session_state["ol_editions"] = []
-                st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+        eds = st.session_state.get("ol_editions", [])
+        if not eds:
+            st.info("No editions found.")
+        else:
+            st.markdown(
+                "<div style='max-width:50%; font-size:0.9em;'>",
+                unsafe_allow_html=True,
+            )
+            for j, ed in enumerate(eds):
+                uniq = f"{w['work_id']}_{j}"
+                cols = st.columns([1, 5, 3, 2, 1.5])
+                with cols[0]:
+                    if ed["cover_url"]:
+                        st.image(ed["cover_url"], width=50)
+                cols[1].markdown(
+                    f"**{ed['title']}**  \n📅 {ed.get('publish_date','')}"
+                )
+                cols[2].markdown(ed.get("publisher", ""))
+                cols[3].markdown(
+                    f"📖 {ed.get('pages') or '—'}  \n🔢 {ed.get('isbn') or ''}"
+                )
 
-# ---- Results: Editions ----
-if st.session_state["ol_selected_work"]:
-    w = st.session_state["ol_selected_work"]
-    st.markdown(
-        f"<h5 style='margin-top:1em'>Selected Work: <em>{w['title']}</em> — {w['author']}</h5>",
-        unsafe_allow_html=True,
-    )
-    eds = st.session_state.get("ol_editions", [])
-    if not eds:
-        st.info("No editions found.")
-    else:
-        st.markdown("<div style='max-width:50%; font-size:0.9em;'>", unsafe_allow_html=True)
-        for j, ed in enumerate(eds):
-            uniq = f"{w['work_id']}_{j}"
-            cols = st.columns([1, 5, 3, 2, 1.5])
-            with cols[0]:
-                if ed["cover_url"]:
-                    st.image(ed["cover_url"], width=50)
-            cols[1].markdown(f"**{ed['title']}**  \n📅 {ed.get('publish_date','')}")
-            cols[2].markdown(ed.get("publisher", ""))
-            cols[3].markdown(f"📖 {ed.get('pages') or '—'}  \n🔢 {ed.get('isbn') or ''}")
+                if cols[4].button("Add", key=f"add_ed_{uniq}"):
+                    from db_google import add_book
 
-            if cols[4].button("Add", key=f"add_ed_{uniq}"):
-                from db_google import add_book
-                
-                # --- Normalize values before insert ---
-                pub_year = (ed.get("publish_date") or "")[:4]
-                try:
-                    pub_year = int(pub_year) if pub_year else ""
-                except ValueError:
-                    pass
-                
-                pages = ed.get("pages")
-                try:
-                    pages = int(pages) if pages else ""
-                except ValueError:
-                    pass
-                
-                date_finished = datetime.now().strftime("%Y-%m").strip()
-                book_data = {
-                    "title": ed.get("title") or w["title"],
-                    "author": w.get("author", ""),
-                    "publisher": ed.get("publisher", ""),
-                    "pub_year": pub_year,
-                    "pages": pages,
-                    "genre": "",
-                    "author_gender": "",
-                    "fiction_nonfiction": "",
-                    "tags": "",
-                    "date_finished": date_finished,
-                    "cover_url": ed.get("cover_url", ""),
-                    "openlibrary_id": w["work_id"],
-                    "isbn": ed.get("isbn", ""),
-                    "word_count": (ed.get("pages") or 0) * 250 if ed.get("pages") else "",
-                }
-                try:
-                    add_book(book_data)
-                    st.success(f"Added: {book_data['title']} ({date_finished})")
+                    # Normalize values
+                    pub_year = (ed.get("publish_date") or "")[:4]
+                    try:
+                        pub_year = int(pub_year) if pub_year else ""
+                    except ValueError:
+                        pub_year = ""
 
-                    # close search state and store ID
-                    st.session_state["ol_results"] = []
-                    st.session_state["ol_selected_work"] = None
-                    st.session_state["ol_editions"] = []
-                    st.session_state["last_added_id"] = book_data["isbn"] or book_data["title"]
+                    pages = ed.get("pages")
+                    try:
+                        pages = int(pages) if pages else ""
+                    except ValueError:
+                        pages = ""
 
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Failed to add book: {e}")
-    st.markdown("</div>", unsafe_allow_html=True)
+                    date_finished = datetime.now().strftime("%Y-%m").strip()
+                    book_data = {
+                        "title": ed.get("title") or w["title"],
+                        "author": w.get("author", ""),
+                        "publisher": ed.get("publisher", ""),
+                        "pub_year": pub_year,
+                        "pages": pages,
+                        "genre": "",
+                        "author_gender": "",
+                        "fiction_nonfiction": "",
+                        "tags": "",
+                        "date_finished": date_finished,
+                        "cover_url": ed.get("cover_url", ""),
+                        "openlibrary_id": w["work_id"],
+                        "isbn": ed.get("isbn", ""),
+                        "word_count": (ed.get("pages") or 0) * 250
+                        if ed.get("pages")
+                        else "",
+                    }
+                    try:
+                        add_book(book_data)
+                        st.success(f"Added: {book_data['title']} ({date_finished})")
 
-# -------------------------------------
-# If last_added_id exists, open library
-# -------------------------------------
-if st.session_state.get("last_added_id"):
-    # When returning to library view, highlight or open the new addition
-    st.markdown(
-        f"<script>window.location.hash='#{st.session_state['last_added_id']}'</script>",
-        unsafe_allow_html=True,
-    )
-st.markdown('</div>', unsafe_allow_html=True)
+                        # Reset search state and remember new book
+                        st.session_state["ol_results"] = []
+                        st.session_state["ol_selected_work"] = None
+                        st.session_state["ol_editions"] = []
+                        st.session_state["last_added_id"] = (
+                            book_data["isbn"] or book_data["title"]
+                        )
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Failed to add book: {e}")
+            st.markdown("</div>", unsafe_allow_html=True)
 
-# ---------- Session for detail view ----------
-if "selected_book" not in st.session_state:
-    st.session_state["selected_book"] = None
+    # Anchor to last added (if you later add matching IDs in library)
+    if st.session_state.get("last_added_id"):
+        st.markdown(
+            f"<script>window.location.hash='#{st.session_state['last_added_id']}'</script>",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("</div>", unsafe_allow_html=True)  # close add-book-area div
 
 
-# ---------- Charts ----------
+# ------------------------------------------------------------
+# CHARTS (RESPECTING FILTERED BOOKS)
+# ------------------------------------------------------------
+st.session_state.setdefault("selected_book", None)
 show_charts(books)
 
 
-# ---------- Library ----------
+# ------------------------------------------------------------
+# LIBRARY (ACCORDION BY YEAR/MONTH, INLINE DETAILS)
+# ------------------------------------------------------------
 st.header("📖 Library")
 
 MONTHS = {
-    "01": "January","02": "February","03": "March","04": "April",
-    "05": "May","06": "June","07": "July","08": "August",
-    "09": "September","10": "October","11": "November","12": "December"
+    "01": "January",
+    "02": "February",
+    "03": "March",
+    "04": "April",
+    "05": "May",
+    "06": "June",
+    "07": "July",
+    "08": "August",
+    "09": "September",
+    "10": "October",
+    "11": "November",
+    "12": "December",
 }
 
 # Group by year/month
@@ -368,18 +446,20 @@ for b in books:
         y, m = d.split("-")[:2]
         grouped[y][m].append(b)
 
-# Find most recent
+# Find most recent month with data
 try:
     mr = max(
         datetime.strptime(b["date_finished"], "%Y-%m")
-        for b in books if b.get("date_finished") and "-" in b["date_finished"]
+        for b in books
+        if b.get("date_finished") and "-" in b["date_finished"]
     )
     RECENT_Y, RECENT_M = str(mr.year), mr.strftime("%m")
 except Exception:
     RECENT_Y = RECENT_M = None
 
-# Helper toggle (no expanders)
-def toggle(label: str, key: str, default=False):
+
+def toggle(label: str, key: str, default: bool = False):
+    """Custom toggle (no expander) using a small button and bold label."""
     if key not in st.session_state:
         st.session_state[key] = default
     cols = st.columns([0.05, 0.95])
@@ -392,7 +472,8 @@ def toggle(label: str, key: str, default=False):
         st.markdown(f"**{label}**")
     st.markdown("<hr style='margin:2px 0;'>", unsafe_allow_html=True)
 
-# ---------- Library structure ----------
+
+# Library structure
 for y in sorted(grouped.keys(), reverse=True):
     year_total = sum(len(v) for v in grouped[y].values())
     y_key = f"year_{y}"
@@ -425,95 +506,128 @@ for y in sorted(grouped.keys(), reverse=True):
                         title = b.get("title", "Untitled")
                         author = b.get("author", "Unknown")
 
-                        # make the title look like a hyperlink but act as a toggle button
-                        link_label = f"{title}"
-                        if st.button(link_label, key=f"titlebtn_{unique}", help="Show / hide details"):
-                            st.session_state[detail_key] = not st.session_state[detail_key]
+                        # Title as toggle-like button
+                        if st.button(
+                            title,
+                            key=f"titlebtn_{unique}",
+                            help="Show / hide details",
+                        ):
+                            st.session_state[detail_key] = not st.session_state[
+                                detail_key
+                            ]
                             st.rerun()
                         st.caption(f"*{author}*")
 
-                    # --- Inline detail block ---
+                    # Detail block
                     if st.session_state[detail_key]:
-                        with st.container():
-                            st.markdown("---")
-                            st.markdown(f"### {title}")
-                            st.caption(f"by {author}")
+                        st.markdown("---")
+                        st.markdown(f"### {title}")
+                        st.caption(f"by {author}")
 
-                            cols_d = st.columns([1, 3])
-                            with cols_d[0]:
-                                if cover and os.path.exists(cover):
-                                    st.image(cover, width=180)
+                        cols_d = st.columns([1, 3])
+                        with cols_d[0]:
+                            if cover and os.path.exists(cover):
+                                st.image(cover, width=180)
 
-                            with cols_d[1]:
-                                st.markdown(f"**Publisher:** {b.get('publisher','')}")
-                                st.markdown(f"**Publication Year:** {b.get('pub_year','')}")
-                                st.markdown(f"**Pages:** {b.get('pages','')}")
-                                st.markdown(f"**Genre:** {b.get('genre','')}")
-                                st.markdown(f"**Fiction / Non-fiction:** {b.get('fiction_nonfiction','')}")
-                                st.markdown(f"**Author Gender:** {b.get('author_gender','')}")
-                                st.markdown(f"**Tags:** {b.get('tags','')}")
-                                st.markdown(f"**Date Finished:** {b.get('date_finished','')}")
-                                st.markdown(f"**ISBN:** {b.get('isbn','')}")
-                                st.markdown(f"**Word Count:** {b.get('word_count','')}")
-                                st.markdown(f"**OpenLibrary ID:** {b.get('openlibrary_id','')}")
+                        with cols_d[1]:
+                            st.markdown(f"**Publisher:** {b.get('publisher','')}")
+                            st.markdown(f"**Publication Year:** {b.get('pub_year','')}")
+                            st.markdown(f"**Pages:** {b.get('pages','')}")
+                            st.markdown(f"**Genre:** {b.get('genre','')}")
+                            st.markdown(
+                                f"**Fiction / Non-fiction:** {b.get('fiction_nonfiction','')}"
+                            )
+                            st.markdown(
+                                f"**Author Gender:** {b.get('author_gender','')}"
+                            )
+                            st.markdown(f"**Tags:** {b.get('tags','')}")
+                            st.markdown(
+                                f"**Date Finished:** {b.get('date_finished','')}"
+                            )
+                            st.markdown(f"**ISBN:** {b.get('isbn','')}")
+                            st.markdown(
+                                f"**Word Count:** {b.get('word_count','')}"
+                            )
+                            st.markdown(
+                                f"**OpenLibrary ID:** {b.get('openlibrary_id','')}"
+                            )
 
-                                if st.button("🔍 Enrich Metadata", key=f"enrich_{detail_key}"):
-                                    from db_google import update_book_metadata_full, get_all_books
-                                    with st.spinner("Contacting Gemini to fill in missing info..."):
-                                        existing = {
-                                            "publisher": b.get("publisher"),
-                                            "pub_year": b.get("pub_year"),
-                                            "pages": b.get("pages"),
-                                            "genre": b.get("genre"),
-                                            "fiction_nonfiction": b.get("fiction_nonfiction"),
-                                            "author_gender": b.get("author_gender"),
-                                            "tags": b.get("tags"),
-                                            "isbn": b.get("isbn"),
-                                            "cover_url": b.get("cover_url"),
-                                        }
+                            # Enrichment button
+                            if st.button(
+                                "🔍 Enrich Metadata", key=f"enrich_{detail_key}"
+                            ):
+                                with st.spinner(
+                                    "Contacting Gemini to fill in missing info..."
+                                ):
+                                    existing = {
+                                        "publisher": b.get("publisher"),
+                                        "pub_year": b.get("pub_year"),
+                                        "pages": b.get("pages"),
+                                        "genre": b.get("genre"),
+                                        "fiction_nonfiction": b.get(
+                                            "fiction_nonfiction"
+                                        ),
+                                        "author_gender": b.get("author_gender"),
+                                        "tags": b.get("tags"),
+                                        "isbn": b.get("isbn"),
+                                        "cover_url": b.get("cover_url"),
+                                    }
 
-                                        enriched = enrich_book_metadata(
-                                            b.get("title"), b.get("author"), b.get("isbn"), existing=existing
+                                    enriched = enrich_book_metadata(
+                                        b.get("title"),
+                                        b.get("author"),
+                                        b.get("isbn"),
+                                        existing=existing,
+                                    )
+
+                                if "error" in enriched:
+                                    st.error(f"Enrichment failed: {enriched['error']}")
+                                else:
+                                    # Fill only missing fields
+                                    for k, v in enriched.items():
+                                        if v and not b.get(k):
+                                            b[k] = v
+
+                                    try:
+                                        update_book_metadata_full(
+                                            b.get("id"),
+                                            b.get("title"),
+                                            b.get("author"),
+                                            b.get("publisher"),
+                                            b.get("pub_year"),
+                                            b.get("pages"),
+                                            b.get("genre"),
+                                            b.get("author_gender"),
+                                            b.get("fiction_nonfiction"),
+                                            b.get("tags"),
+                                            b.get("date_finished"),
+                                            b.get("openlibrary_id"),
+                                            b.get("isbn"),
                                         )
 
-                                    if "error" in enriched:
-                                        st.error(f"Enrichment failed: {enriched['error']}")
-                                    else:
-                                        # fill missing fields only
-                                        for k, v in enriched.items():
-                                            if v and not b.get(k):
-                                                b[k] = v
+                                        # Reload single book from sheet
+                                        st.cache_data.clear()
+                                        all_books = get_all_books()
+                                        updated = next(
+                                            (
+                                                bk
+                                                for bk in all_books
+                                                if str(bk.get("id"))
+                                                == str(b.get("id"))
+                                            ),
+                                            None,
+                                        )
+                                        if updated:
+                                            b.update(updated)
 
-                                        try:
-                                            update_book_metadata_full(
-                                                b.get("id"),
-                                                b.get("title"),
-                                                b.get("author"),
-                                                b.get("publisher"),
-                                                b.get("pub_year"),
-                                                b.get("pages"),
-                                                b.get("genre"),
-                                                b.get("author_gender"),
-                                                b.get("fiction_nonfiction"),
-                                                b.get("tags"),
-                                                b.get("date_finished"),
-                                                b.get("openlibrary_id"),
-                                                b.get("isbn"),
-                                            )
+                                        st.success(
+                                            "✅ Missing metadata filled and saved."
+                                        )
+                                    except Exception as e:
+                                        st.error(
+                                            f"Could not update Google Sheet: {e}"
+                                        )
 
-                                            # reload sheet data
-                                            st.cache_data.clear()
-                                            time.sleep(0.15)
-                                            books = get_all_books()
-                                            updated = next((bk for bk in books if str(bk.get("id")) == str(b.get("id"))), None)
-                                            if updated:
-                                                b.update(updated)
-
-                                            st.success("✅ Missing metadata filled and saved.")
-                                        except Exception as e:
-                                            st.error(f"Could not update Google Sheet: {e}")
-
-                            if st.button("Hide details", key=f"hide_{unique}"):
-                                st.session_state[detail_key] = False
-                                st.rerun()
-
+                        if st.button("Hide details", key=f"hide_{unique}"):
+                            st.session_state[detail_key] = False
+                            st.rerun()
