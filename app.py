@@ -279,17 +279,22 @@ except Exception as e:
 if not books:
     st.info("No books found in your Google Sheet.")
     st.stop()
-    
+
+# ------------------------------------------------------------
+# NOTHING goes above this line. books must exist before filters.
+# ------------------------------------------------------------
+
+
 # ---------------------------------
 # SIDEBAR FILTERS
 # ---------------------------------
 st.sidebar.header("Filter Library")
 
-# --- Build option lists ---
-years = sorted({b.get("date_finished","")[:4] for b in books if b.get("date_finished")}, reverse=True)
-months = sorted({b.get("date_finished","")[5:7] for b in books if b.get("date_finished")})
-authors = sorted({b.get("author","") for b in books if b.get("author")})
-titles = sorted({b.get("title","") for b in books if b.get("title")})
+# --- option lists ---
+years = sorted({b.get("date_finished", "")[:4] for b in books if b.get("date_finished")}, reverse=True)
+months = sorted({b.get("date_finished", "")[5:7] for b in books if b.get("date_finished")})
+authors = sorted({b.get("author", "") for b in books if b.get("author")})
+titles = sorted({b.get("title", "") for b in books if b.get("title")})
 
 # --- Inputs ---
 f_years = st.sidebar.multiselect("Year finished", years)
@@ -305,48 +310,31 @@ f_gender = st.sidebar.multiselect("Author gender", ["Male", "Female", "Other"])
 
 apply_filters = st.sidebar.button("Apply Filters")
 
-# Storage for filtered results
+# Storage
 if "filtered_books" not in st.session_state:
     st.session_state["filtered_books"] = books
 
-# When button pressed → apply filter
 if apply_filters:
     filtered = []
     for b in books:
-        df = b.get("date_finished","")
+        df = b.get("date_finished", "")
         yr = df[:4] if "-" in df else ""
         mo = df[5:7] if "-" in df else ""
 
-        # Year
         if f_years and yr not in f_years:
             continue
-
-        # Month
         if f_months and mo not in f_months:
             continue
-
-        # Author
-        if f_authors and b.get("author","") not in f_authors:
+        if f_authors and b.get("author", "") not in f_authors:
             continue
-
-        # Title
-        if f_titles and b.get("title","") not in f_titles:
+        if f_titles and b.get("title", "") not in f_titles:
             continue
-
-        # Genre substring
         if f_genre and f_genre.lower() not in (b.get("genre") or "").lower():
             continue
-
-        # Tags substring
         if f_tags and f_tags.lower() not in (b.get("tags") or "").lower():
             continue
-
-        # Fiction / Non-fiction
-        if f_type != "All":
-            if (b.get("fiction_nonfiction") or "") != f_type:
-                continue
-
-        # Author gender
+        if f_type != "All" and (b.get("fiction_nonfiction") or "") != f_type:
+            continue
         if f_gender:
             g = (b.get("author_gender") or "").capitalize()
             if g not in f_gender:
@@ -356,8 +344,9 @@ if apply_filters:
 
     st.session_state["filtered_books"] = filtered
 
-# Final dataset used by the library
+# Replace original
 books = st.session_state["filtered_books"]
+
 
 
 # ---------- Session for detail view ----------
