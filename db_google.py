@@ -12,15 +12,12 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive.file"
 ]
 
-# --- AUTHENTICATION ---
-def _get_client(retries: int = 3, delay: float = 0.5):
-    for attempt in range(retries):
-        service_info = st.secrets.get("gcp_service_account")
-        if service_info:
-            creds = SACreds.from_service_account_info(service_info, scopes=SCOPES)
-            return gspread.authorize(creds)
-        time.sleep(delay)
-    raise RuntimeError("❌ Missing [gcp_service_account] block in Streamlit secrets after retries.")
+@st.cache_resource(show_spinner=False)
+def _get_client():
+    # Fail fast if secrets truly missing; otherwise reuse the cached client
+    service_info = st.secrets["gcp_service_account"]
+    creds = SACreds.from_service_account_info(service_info, scopes=SCOPES)
+    return gspread.authorize(creds)
 
 
 # --- CONFIG ---
@@ -35,14 +32,9 @@ HEADERS = [
 SHEET_ID = "1nnYvuKRAew48h6xXPgmQXxxgPzCjHMFiQwfBh0uQk7A"
 
 def _get_sheet():
-    """Open the existing Google Sheet by ID (shared with the service account)."""
     gc = _get_client()
-    try:
-        sh = gc.open_by_key(SHEET_ID)
-    except Exception as e:
-        raise RuntimeError(f"⚠️ Could not open Google Sheet: {e}")
+    sh = gc.open_by_key(SHEET_ID)
     return sh.sheet1
-
 
 
 # --- CRUD FUNCTIONS ---
