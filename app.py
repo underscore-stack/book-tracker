@@ -272,6 +272,14 @@ st.markdown('</div>', unsafe_allow_html=True)
 # ---------- Load data ----------
 try:
     books = get_all_books()
+except Exception as e:
+    st.error(f"⚠️ Could not load books: {e}")
+    st.stop()
+
+if not books:
+    st.info("No books found in your Google Sheet.")
+    st.stop()
+    
 # ---------------------------------
 # SIDEBAR FILTERS
 # ---------------------------------
@@ -350,15 +358,6 @@ if apply_filters:
 
 # Final dataset used by the library
 books = st.session_state["filtered_books"]
-
-
-except Exception as e:
-    st.error(f"⚠️ Could not load books: {e}")
-    st.stop()
-
-if not books:
-    st.info("No books found in your Google Sheet.")
-    st.stop()
 
 
 # ---------- Session for detail view ----------
