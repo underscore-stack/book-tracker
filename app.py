@@ -442,8 +442,9 @@ for y in sorted(grouped.keys(), reverse=True):
                                         )
                             
                                         # reload sheet data to show fresh values
+                                        import time
                                         st.cache_data.clear()
-                                        st.cache_resource.clear()
+                                        time.sleep(0.15)
                                         books = get_all_books()
                                         # re-find this book by id
                                         updated = next((bk for bk in books if str(bk.get("id")) == str(b.get("id"))), None)
