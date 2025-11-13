@@ -348,7 +348,6 @@ if apply_filters:
 books = st.session_state["filtered_books"]
 
 
-
 # ---------- Session for detail view ----------
 if "selected_book" not in st.session_state:
     st.session_state["selected_book"] = None
