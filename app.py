@@ -19,6 +19,16 @@ def local_css(file_name: str):
 local_css("styles.css")
 
 st.title("📚 Book Tracker")
+# ---------- Load data ----------
+try:
+    books = get_all_books()
+except Exception as e:
+    st.error(f"⚠️ Could not load books: {e}")
+    st.stop()
+
+if not books:
+    st.info("No books found in your Google Sheet.")
+    st.stop()
 
 # ---------------------------------
 # ADD BOOK SECTION (streamlined UI)
@@ -268,21 +278,6 @@ if st.session_state.get("last_added_id"):
         unsafe_allow_html=True,
     )
 st.markdown('</div>', unsafe_allow_html=True)
-
-# ---------- Load data ----------
-try:
-    books = get_all_books()
-except Exception as e:
-    st.error(f"⚠️ Could not load books: {e}")
-    st.stop()
-
-if not books:
-    st.info("No books found in your Google Sheet.")
-    st.stop()
-
-# ------------------------------------------------------------
-# NOTHING goes above this line. books must exist before filters.
-# ------------------------------------------------------------
 
 
 # ---------------------------------
