@@ -409,10 +409,10 @@ for y in sorted(grouped.keys(), reverse=True):
                 for idx, b in enumerate(month_books):
                     unique = f"{y}_{m}_{idx}_{b.get('id','x')}"
                     detail_key = f"detail_open_{unique}"
-            
+
                     if detail_key not in st.session_state:
                         st.session_state[detail_key] = False
-            
+
                     cols = st.columns([1, 5])
                     with cols[0]:
                         cover = get_cached_or_drive_cover(b)
@@ -420,29 +420,30 @@ for y in sorted(grouped.keys(), reverse=True):
                             st.image(cover, width=60)
                         else:
                             st.caption("No cover")
-            
+
                     with cols[1]:
                         title = b.get("title", "Untitled")
                         author = b.get("author", "Unknown")
-            
+
                         # make the title look like a hyperlink but act as a toggle button
                         link_label = f"{title}"
                         if st.button(link_label, key=f"titlebtn_{unique}", help="Show / hide details"):
                             st.session_state[detail_key] = not st.session_state[detail_key]
                             st.rerun()
                         st.caption(f"*{author}*")
-            
+
                     # --- Inline detail block ---
                     if st.session_state[detail_key]:
                         with st.container():
                             st.markdown("---")
                             st.markdown(f"### {title}")
                             st.caption(f"by {author}")
-                    
+
                             cols_d = st.columns([1, 3])
                             with cols_d[0]:
                                 if cover and os.path.exists(cover):
                                     st.image(cover, width=180)
+
                             with cols_d[1]:
                                 st.markdown(f"**Publisher:** {b.get('publisher','')}")
                                 st.markdown(f"**Publication Year:** {b.get('pub_year','')}")
@@ -455,70 +456,64 @@ for y in sorted(grouped.keys(), reverse=True):
                                 st.markdown(f"**ISBN:** {b.get('isbn','')}")
                                 st.markdown(f"**Word Count:** {b.get('word_count','')}")
                                 st.markdown(f"**OpenLibrary ID:** {b.get('openlibrary_id','')}")
-                    
-                            # --- New enrichment button ---
-                            if st.button("🔍 Enrich Metadata", key=f"enrich_{detail_key}"):
-                                from enrichment import enrich_book_metadata
-                                from db_google import update_book_metadata_full, get_all_books
-                            
-                                with st.spinner("Contacting Gemini to fill in missing info..."):
-                                    existing = {
-                                        "publisher": b.get("publisher"),
-                                        "pub_year": b.get("pub_year"),
-                                        "pages": b.get("pages"),
-                                        "genre": b.get("genre"),
-                                        "fiction_nonfiction": b.get("fiction_nonfiction"),
-                                        "author_gender": b.get("author_gender"),
-                                        "tags": b.get("tags"),
-                                        "isbn": b.get("isbn"),
-                                        "cover_url": b.get("cover_url"),
-                                    }
-                            
-                                    enriched = enrich_book_metadata(
-                                        b.get("title"), b.get("author"), b.get("isbn"), existing=existing
-                                    )
-                            
-                                if "error" in enriched:
-                                    st.error(f"Enrichment failed: {enriched['error']}")
-                                else:
-                                    # fill missing fields only
-                                    for k, v in enriched.items():
-                                        if v and not b.get(k):
-                                            b[k] = v
-                            
-                                    try:
-                                        update_book_metadata_full(
-                                            b.get("id"),
-                                            b.get("title"),
-                                            b.get("author"),
-                                            b.get("publisher"),
-                                            b.get("pub_year"),
-                                            b.get("pages"),
-                                            b.get("genre"),
-                                            b.get("author_gender"),
-                                            b.get("fiction_nonfiction"),
-                                            b.get("tags"),
-                                            b.get("date_finished"),
-                                            b.get("openlibrary_id"),
-                                            b.get("isbn"),
-                                        )
-                            
-                                        # reload sheet data to show fresh values
-                                        import time
-                                        st.cache_data.clear()
-                                        time.sleep(0.15)
-                                        books = get_all_books()
-                                        # re-find this book by id
-                                        updated = next((bk for bk in books if str(bk.get("id")) == str(b.get("id"))), None)
-                                        if updated:
-                                            b.update(updated)
-                            
-                                        st.success("✅ Missing metadata filled and saved.")
-                                        # keep panel open (no st.rerun)
-                                    except Exception as e:
-                                        st.error(f"Could not update Google Sheet: {e}")
 
-                    
+                                if st.button("🔍 Enrich Metadata", key=f"enrich_{detail_key}"):
+                                    from db_google import update_book_metadata_full, get_all_books
+                                    with st.spinner("Contacting Gemini to fill in missing info..."):
+                                        existing = {
+                                            "publisher": b.get("publisher"),
+                                            "pub_year": b.get("pub_year"),
+                                            "pages": b.get("pages"),
+                                            "genre": b.get("genre"),
+                                            "fiction_nonfiction": b.get("fiction_nonfiction"),
+                                            "author_gender": b.get("author_gender"),
+                                            "tags": b.get("tags"),
+                                            "isbn": b.get("isbn"),
+                                            "cover_url": b.get("cover_url"),
+                                        }
+
+                                        enriched = enrich_book_metadata(
+                                            b.get("title"), b.get("author"), b.get("isbn"), existing=existing
+                                        )
+
+                                    if "error" in enriched:
+                                        st.error(f"Enrichment failed: {enriched['error']}")
+                                    else:
+                                        # fill missing fields only
+                                        for k, v in enriched.items():
+                                            if v and not b.get(k):
+                                                b[k] = v
+
+                                        try:
+                                            update_book_metadata_full(
+                                                b.get("id"),
+                                                b.get("title"),
+                                                b.get("author"),
+                                                b.get("publisher"),
+                                                b.get("pub_year"),
+                                                b.get("pages"),
+                                                b.get("genre"),
+                                                b.get("author_gender"),
+                                                b.get("fiction_nonfiction"),
+                                                b.get("tags"),
+                                                b.get("date_finished"),
+                                                b.get("openlibrary_id"),
+                                                b.get("isbn"),
+                                            )
+
+                                            # reload sheet data
+                                            st.cache_data.clear()
+                                            time.sleep(0.15)
+                                            books = get_all_books()
+                                            updated = next((bk for bk in books if str(bk.get("id")) == str(b.get("id"))), None)
+                                            if updated:
+                                                b.update(updated)
+
+                                            st.success("✅ Missing metadata filled and saved.")
+                                        except Exception as e:
+                                            st.error(f"Could not update Google Sheet: {e}")
+
                             if st.button("Hide details", key=f"hide_{unique}"):
                                 st.session_state[detail_key] = False
                                 st.rerun()
+
