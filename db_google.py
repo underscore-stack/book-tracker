@@ -3,6 +3,8 @@ import os
 import json
 from google.oauth2.service_account import Credentials as SACreds
 import streamlit as st
+import time
+
 
 # Define the scopes for Google Sheets + Drive
 SCOPES = [
@@ -11,13 +13,14 @@ SCOPES = [
 ]
 
 # --- AUTHENTICATION ---
-def _get_client():
-    import streamlit as st
-    service_info = st.secrets.get("gcp_service_account")
-    if not service_info:
-        raise RuntimeError("❌ Missing [gcp_service_account] block in Streamlit secrets.")
-    creds = SACreds.from_service_account_info(service_info, scopes=SCOPES)
-    return gspread.authorize(creds)
+def _get_client(retries: int = 3, delay: float = 0.5):
+    for attempt in range(retries):
+        service_info = st.secrets.get("gcp_service_account")
+        if service_info:
+            creds = SACreds.from_service_account_info(service_info, scopes=SCOPES)
+            return gspread.authorize(creds)
+        time.sleep(delay)
+    raise RuntimeError("❌ Missing [gcp_service_account] block in Streamlit secrets after retries.")
 
 
 # --- CONFIG ---
