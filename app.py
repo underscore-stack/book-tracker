@@ -21,7 +21,7 @@ st.sidebar.header("Filter Library")
 years = sorted({b.get("date_finished", "")[:4] for b in books if b.get("date_finished")}, reverse=True)
 months = sorted({b.get("date_finished", "")[5:7] for b in books if b.get("date_finished")})
 authors = sorted({b.get("author", "") for b in books if b.get("author")})
-titles = sorted({b.get("title", "") for b in books if b.get("title")})
+#titles = sorted({b.get("title", "") for b in books if b.get("title")})
 
 st.write("Loaded books:", len(books))
 st.write("Years:", years)
