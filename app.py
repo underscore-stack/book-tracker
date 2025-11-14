@@ -480,7 +480,12 @@ for y in sorted(grouped.keys(), reverse=True):
                 for idx, b in enumerate(month_books):
                     unique = f"{y}_{m}_{idx}_{b.get('id','x')}"
                     detail_key = f"detail_open_{unique}"
-
+                    
+                    edit_key = f"edit_mode_{unique}"
+                    
+                    if edit_key not in st.session_state:
+                        st.session_state[edit_key] = False
+                        
                     if detail_key not in st.session_state:
                         st.session_state[detail_key] = False
 
@@ -513,34 +518,101 @@ for y in sorted(grouped.keys(), reverse=True):
                         st.markdown("---")
                         st.markdown(f"### {title}")
                         st.caption(f"by {author}")
-
+                    
                         cols_d = st.columns([1, 3])
                         with cols_d[0]:
                             if cover and os.path.exists(cover):
                                 st.image(cover, width=180)
-
+                    
                         with cols_d[1]:
-                            st.markdown(f"**Publisher:** {b.get('publisher','')}")
-                            st.markdown(f"**Publication Year:** {b.get('pub_year','')}")
-                            st.markdown(f"**Pages:** {b.get('pages','')}")
-                            st.markdown(f"**Genre:** {b.get('genre','')}")
-                            st.markdown(
-                                f"**Fiction / Non-fiction:** {b.get('fiction_nonfiction','')}"
-                            )
-                            st.markdown(
-                                f"**Author Gender:** {b.get('author_gender','')}"
-                            )
-                            st.markdown(f"**Tags:** {b.get('tags','')}")
-                            st.markdown(
-                                f"**Date Finished:** {b.get('date_finished','')}"
-                            )
-                            st.markdown(f"**ISBN:** {b.get('isbn','')}")
-                            st.markdown(
-                                f"**Word Count:** {b.get('word_count','')}"
-                            )
-                            st.markdown(
-                                f"**OpenLibrary ID:** {b.get('openlibrary_id','')}"
-                            )
+                    
+                            # ======================
+                            # EDIT MODE
+                            # ======================
+                            if st.session_state[edit_key]:
+                    
+                                new_publisher = st.text_input("Publisher", b.get("publisher",""), key=f"pub_{unique}")
+                                new_pub_year = st.text_input("Publication Year", str(b.get("pub_year","")), key=f"year_{unique}")
+                                new_pages = st.text_input("Pages", str(b.get("pages","")), key=f"pages_{unique}")
+                                new_genre = st.text_input("Genre", b.get("genre",""), key=f"genre_{unique}")
+                    
+                                new_fiction = st.selectbox(
+                                    "Fiction / Non-fiction",
+                                    ["", "Fiction", "Non-fiction"],
+                                    index=["","Fiction","Non-fiction"].index(b.get("fiction_nonfiction","")),
+                                    key=f"fiction_{unique}"
+                                )
+                    
+                                new_gender = st.selectbox(
+                                    "Author Gender",
+                                    ["", "Male", "Female", "Other"],
+                                    index=["","Male","Female","Other"].index(b.get("author_gender","")),
+                                    key=f"authgender_{unique}"
+                                )
+                    
+                                new_tags = st.text_input("Tags (comma-separated)", b.get("tags",""), key=f"tags_{unique}")
+                                new_date = st.text_input("Date Finished (YYYY-MM)", b.get("date_finished",""), key=f"date_{unique}")
+                                new_isbn = st.text_input("ISBN", b.get("isbn",""), key=f"isbn_{unique}")
+                    
+                                save_col, cancel_col = st.columns([1,1])
+                    
+                                with save_col:
+                                    if st.button("💾 Save", key=f"save_{unique}"):
+                    
+                                        try:
+                                            update_book_metadata_full(
+                                                b.get("id"),
+                                                b.get("title"),
+                                                b.get("author"),
+                                                new_publisher,
+                                                new_pub_year,
+                                                new_pages,
+                                                new_genre,
+                                                new_gender,
+                                                new_fiction,
+                                                new_tags,
+                                                new_date,
+                                                b.get("openlibrary_id"),
+                                                new_isbn,
+                                            )
+                    
+                                            # Reload from Google Sheets
+                                            st.cache_data.clear()
+                                            all_books = get_all_books()
+                    
+                                            updated = next((bk for bk in all_books if str(bk.get("id")) == str(b.get("id"))), None)
+                                            if updated:
+                                                b.update(updated)
+                    
+                                            st.success("Changes saved.")
+                                            st.session_state[edit_key] = False
+                    
+                                        except Exception as e:
+                                            st.error(f"Could not update Google Sheet: {e}")
+                    
+                                with cancel_col:
+                                    if st.button("Cancel", key=f"cancel_{unique}"):
+                                        st.session_state[edit_key] = False
+                    
+                            # ======================
+                            # VIEW MODE
+                            # ======================
+                            else:
+                                st.markdown(f"**Publisher:** {b.get('publisher','')}")
+                                st.markdown(f"**Publication Year:** {b.get('pub_year','')}")
+                                st.markdown(f"**Pages:** {b.get('pages','')}")
+                                st.markdown(f"**Genre:** {b.get('genre','')}")
+                                st.markdown(f"**Fiction / Non-fiction:** {b.get('fiction_nonfiction','')}")
+                                st.markdown(f"**Author Gender:** {b.get('author_gender','')}")
+                                st.markdown(f"**Tags:** {b.get('tags','')}")
+                                st.markdown(f"**Date Finished:** {b.get('date_finished','')}")
+                                st.markdown(f"**ISBN:** {b.get('isbn','')}")
+                                st.markdown(f"**Word Count:** {b.get('word_count','')}")
+                                st.markdown(f"**OpenLibrary ID:** {b.get('openlibrary_id','')}")
+                    
+                                # EDIT BUTTON
+                                if st.button("✏️ Edit Metadata", key=f"editbtn_{unique}"):
+                                    st.session_state[edit_key] = True
 
                             # Enrichment button
                             if st.button(
