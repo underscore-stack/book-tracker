@@ -88,9 +88,9 @@ f_tags = st.sidebar.text_input("Tags contains")
 f_type = st.sidebar.radio("Type", ["All", "Fiction", "Non-fiction"], index=0)
 f_gender = st.sidebar.multiselect("Author gender", ["Male", "Female", "Other"])
 
-apply_filters = st.sidebar.button("Apply Filters", key="applyF")
+apply_filters = st.sidebar.button("Apply Filters", type="primary")
 
-reset_filters = st.sidebar.button("Reset Filters", key="applyR")
+reset_filters = st.sidebar.button("Reset Filters", type="primary")
 
 
 if reset_filters:
