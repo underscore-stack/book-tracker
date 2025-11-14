@@ -25,7 +25,7 @@ def show_charts(books: list):
         ordered=True
     )
 
-    st.header("📊 Reading Analytics ({len(books)} books)")
+    st.header(f"📊 Reading Analytics ({len(books)} books)")
 
     with st.expander("📈 Show Charts", expanded=True):
         # Pages per month
