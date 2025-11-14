@@ -20,11 +20,26 @@ if not books:
 # ---------------------------------
 st.sidebar.header("Filter Library")
 
-years = sorted({b.get("date_finished", "")[:4] for b in books if b.get("date_finished")}, reverse=True)
-months = sorted({b.get("date_finished", "")[5:7] for b in books if b.get("date_finished")})
-authors = sorted({b.get("author", "") for b in books if b.get("author")})
-titles = sorted({b.get("title", "") for b in books if b.get("title")})
+def safe_str(x):
+    """Normalize all values to clean strings."""
+    if x is None:
+        return ""
+    return str(x).strip()
 
+# Build cleaned lists
+clean_dates = [safe_str(b.get("date_finished", "")) for b in books]
+
+years = sorted(
+    {d[:4] for d in clean_dates if len(d) >= 4 and d[0:4].isdigit()},
+    reverse=True
+)
+
+months = sorted(
+    {d[5:7] for d in clean_dates if len(d) >= 7 and d[5:7].isdigit()}
+)
+
+authors = sorted({safe_str(b.get("author", "")) for b in books if b.get("author")})
+titles = sorted({safe_str(b.get("title", "")) for b in books if b.get("title")})
 f_years = st.sidebar.multiselect("Year finished", years)
 f_months = st.sidebar.multiselect("Month finished", months)
 f_authors = st.sidebar.multiselect("Author", authors)
