@@ -92,10 +92,6 @@ apply_filters = st.sidebar.button(
     "Apply Filters",
     key="apply_filters_btn"
 )
-reset_filters = st.sidebar.button(
-    "Reset Filters",
-    key="reset_filters_btn"
-)
 
 if "filtered_books" not in st.session_state:
     st.session_state["filtered_books"] = books
