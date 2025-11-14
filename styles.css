@@ -7,6 +7,26 @@ button[kind="secondary"] {
     padding-left: 0 !important;
 }
 
+/* Center ONLY the Apply Filters button text */
+button[id="apply_filters_btn"] {
+    text-align: center !important;
+    padding-left: 0 !important;   /* undo inherited left-padding */
+    padding-right: 0 !important;
+    width: 100% !important;        /* optional: full width for perfect centering */
+    display: flex !important;
+    justify-content: center !important;
+}
+
+/* Center ONLY the Reset Filters button text */
+button[id="reset_filters_btn"] {
+    text-align: center !important;
+    padding-left: 0 !important;   /* undo inherited left-padding */
+    padding-right: 0 !important;
+    width: 100% !important;        /* optional: full width for perfect centering */
+    display: flex !important;
+    justify-content: center !important;
+}
+
 /* Align title and author on the same left edge and reduce spacing */
 div[data-testid="stHorizontalBlock"] > div:nth-child(2) {
     display: flex;
