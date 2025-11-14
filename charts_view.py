@@ -66,3 +66,68 @@ def show_charts(books: list):
         c1, c2 = st.columns(2)
         with c1: st.altair_chart(pie_chart_f, use_container_width=True)
         with c2: st.altair_chart(pie_chart_g, use_container_width=True)
+
+import pandas as pd
+import streamlit as st
+
+def show_extreme_books(books):
+    """
+    Compute and display longest/shortest books per year using the
+    current (filtered) list of books.
+    """
+
+    # Convert to DataFrame
+    df = pd.DataFrame(books)
+
+    # Clean up page counts
+    df["pages"] = pd.to_numeric(df["pages"], errors="coerce")
+    df["year"] = df["date_finished"].str[:4]
+
+    # Use only valid rows
+    df_valid = df.dropna(subset=["pages", "year"])
+    if df_valid.empty:
+        st.info("Not enough data to compute longest/shortest books.")
+        return
+
+    # Helper: find book(s) matching the extreme of a given metric
+    def get_extreme_books(df, func):
+        grouped = df.groupby("year")["pages"].transform(func)
+        result = df.loc[grouped == df["pages"]]
+        # If multiple books tie, drop duplicates
+        return (
+            result.drop_duplicates("year")
+                  .set_index("year")
+        )
+
+    longest = get_extreme_books(df_valid, "max")
+    shortest = get_extreme_books(df_valid, "min")
+
+    # Build summary table sorted by year
+    years_sorted = sorted(df_valid["year"].unique())
+    summary = pd.DataFrame(index=years_sorted)
+
+    summary["Longest Book"] = longest.apply(
+        lambda x: f"<b>{x['title']}</b> by {x['author']} ({int(x['pages'])} pages)",
+        axis=1
+    )
+
+    summary["Shortest Book"] = shortest.apply(
+        lambda x: f"<b>{x['title']}</b> by {x['author']} ({int(x['pages'])} pages)",
+        axis=1
+    )
+
+    summary.index.name = None
+
+    st.markdown("<h4 style='margin-top: 2em;'>📏 Longest and Shortest Books per Year</h4>",
+                unsafe_allow_html=True)
+
+    st.markdown(
+        summary.to_html(
+            escape=False,
+            index_names=True,
+            classes="custom-table",
+            border=1,
+        ),
+        unsafe_allow_html=True,
+    )
+
