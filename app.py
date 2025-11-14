@@ -10,7 +10,7 @@ import streamlit as st
 
 from db_google import get_all_books, update_book_metadata_full
 from covers_google import get_cached_or_drive_cover
-from charts_view import show_charts
+from charts_view import show_charts, show_extreme_books
 from enrichment import enrich_book_metadata
 
 
@@ -404,6 +404,7 @@ with add_book_container:
 # CHARTS (RESPECTING FILTERED BOOKS)
 # ------------------------------------------------------------
 st.session_state.setdefault("selected_book", None)
+show_extreme_books(books)
 show_charts(books)
 
 
