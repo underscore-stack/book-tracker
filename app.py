@@ -88,22 +88,23 @@ f_tags = st.sidebar.text_input("Tags contains")
 f_type = st.sidebar.radio("Type", ["All", "Fiction", "Non-fiction"], index=0)
 f_gender = st.sidebar.multiselect("Author gender", ["Male", "Female", "Other"])
 
-apply_filters = st.sidebar.button(
-    '<span class="apply-text">Apply Filters</span>',
-    unsafe_allow_html=True
-)
-if "filtered_books" not in st.session_state:
-    st.session_state["filtered_books"] = books
+with st.sidebar.container():
+    st.markdown('<div class="apply-button-wrap">', unsafe_allow_html=True)
+    apply_filters = st.button("Apply Filters", key="apply_filters_btn")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-reset_filters = st.sidebar.button(
-    '<span class="reset-text">Reset Filters</span>',
-    unsafe_allow_html=True
-)
+with st.sidebar.container():
+    st.markdown('<div class="reset-button-wrap">', unsafe_allow_html=True)
+    reset_filters = st.button("Reset Filters", key="reset_filters_btn")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 if reset_filters:
     st.session_state["filtered_books"] = get_all_books()
     st.rerun()
 
+if "filtered_books" not in st.session_state:
+    st.session_state["filtered_books"] = books
+    
 if apply_filters:
     filtered = []
     for b in books:
