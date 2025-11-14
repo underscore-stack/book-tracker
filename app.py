@@ -1,3 +1,20 @@
+import streamlit as st
+from db_google import get_all_books
+
+st.set_page_config(page_title="Test Filters", layout="wide")
+st.title("Test sidebar filters only")
+
+# ---------- Load data ----------
+try:
+    books = get_all_books()
+except Exception as e:
+    st.error(f"⚠️ Could not load books: {e}")
+    st.stop()
+
+if not books:
+    st.info("No books found in your Google Sheet.")
+    st.stop()
+
 # ---------------------------------
 # Sidebar Filters
 # ---------------------------------
@@ -64,3 +81,4 @@ if apply_filters:
     st.session_state["filtered_books"] = filtered
 
 books = st.session_state["filtered_books"]
+
