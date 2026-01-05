@@ -4,29 +4,37 @@ import pandas as pd
 import streamlit as st
 
 def books_to_df(books):
-    # books may be list[dict], list[sqlite3.Row], list[tuple], etc.
-    if not books:
+    """
+    Normalize books into a DataFrame with named columns.
+    Handles: list[dict], list[sqlite3.Row], list[tuple], etc.
+    """
+    if books is None:
+        return pd.DataFrame()
+    if isinstance(books, pd.DataFrame):
+        return books.copy()
+    if not isinstance(books, (list, tuple)) or len(books) == 0:
         return pd.DataFrame()
 
     first = books[0]
 
-    # Already dict-like
+    # list of dicts
     if isinstance(first, dict):
-        return pd.DataFrame(books)
+        return pd.DataFrame.from_records(books)
 
-    # sqlite3.Row is dict(row)-convertible
+    # sqlite3.Row / mapping-ish
     try:
-        return pd.DataFrame([dict(r) for r in books])
+        return pd.DataFrame.from_records([dict(r) for r in books])
     except Exception:
         pass
 
-    # Fallback: tuples -> require explicit column list (update this list to match your DB schema/order)
+    # last resort: sequence rows (tuples/lists)
+    # IMPORTANT: this column list must match the SELECT order if you ever return tuples.
     columns = [
-        "id", "title", "author", "year", "month_num", "pages",
-        "genre", "tags", "format", "author_gender", "fiction_nonfiction",
-        "isbn", "cover_url"
+        "id", "title", "author", "publisher", "pub_year", "pages", "genre",
+        "author_gender", "fiction_nonfiction", "tags", "date_finished",
+        "cover_url", "openlibrary_id", "isbn", "word_count",
     ]
-    return pd.DataFrame(list(books), columns=columns[:len(books[0])])
+    return pd.DataFrame(list(books), columns=columns[:len(first)])
 
 
 def show_charts(books: list):
@@ -35,7 +43,7 @@ def show_charts(books: list):
         st.info("No books to visualize.")
         return
 
-    df = pd.DataFrame(books)
+    df = books_to_df(books)
     df["ym"] = pd.to_datetime(df["date_finished"], format="%Y-%m", errors="coerce")
     df["pages"] = pd.to_numeric(df["pages"], errors="coerce")
     df["word_count"] = pd.to_numeric(df["word_count"], errors="coerce")
@@ -55,7 +63,22 @@ def show_charts(books: list):
 
     with st.expander("📈 Show Charts", expanded=True):
         MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+
+        if df.empty:
+            st.info("No data for charts yet.")
+            return
         
+        # Ensure month_num exists (derived from date_finished if needed)
+        if "month_num" not in df.columns:
+            df["month_num"] = None
+        
+        if df["month_num"].isna().all() and "date_finished" in df.columns:
+            # expecting date_finished like 'YYYY-MM'
+            df["month_num"] = pd.to_datetime(df["date_finished"], errors="coerce").dt.month
+        
+        df = df.dropna(subset=["month_num"])
+        df["month_num"] = df["month_num"].astype(int)
+
         # Pages per month
         pages_by_month = (
             df.groupby(["year", "month_num"], observed=True)["pages"]
@@ -64,7 +87,7 @@ def show_charts(books: list):
         )
         
         pages_by_month["month"] = pages_by_month["month_num"].apply(
-            lambda m: MONTHS[m - 1]
+            lambda m: MONTHS[int(m)-1])
         )
         
         chart_pages = alt.Chart(pages_by_month).mark_line(point=True).encode(
@@ -86,7 +109,7 @@ def show_charts(books: list):
         )
         
         books_by_month["month"] = books_by_month["month_num"].apply(
-            lambda m: MONTHS[m - 1]
+            lambda m: MONTHS[int(m)-1])
         )
         
         chart_books = alt.Chart(books_by_month).mark_bar().encode(
@@ -133,7 +156,11 @@ def show_extreme_books(books):
 
     # Convert to DataFrame
     df = books_to_df(books)
-
+    
+    if df.empty or "pages" not in df.columns:
+        st.info("Not enough data to compute extremes (missing 'pages').")
+        return
+        
     # Clean up page counts
     df["pages"] = pd.to_numeric(df["pages"], errors="coerce")
     df["year"] = df["date_finished"].str[:4]
