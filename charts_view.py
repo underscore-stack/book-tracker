@@ -3,6 +3,32 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+def books_to_df(books):
+    # books may be list[dict], list[sqlite3.Row], list[tuple], etc.
+    if not books:
+        return pd.DataFrame()
+
+    first = books[0]
+
+    # Already dict-like
+    if isinstance(first, dict):
+        return pd.DataFrame(books)
+
+    # sqlite3.Row is dict(row)-convertible
+    try:
+        return pd.DataFrame([dict(r) for r in books])
+    except Exception:
+        pass
+
+    # Fallback: tuples -> require explicit column list (update this list to match your DB schema/order)
+    columns = [
+        "id", "title", "author", "year", "month_num", "pages",
+        "genre", "tags", "format", "author_gender", "fiction_nonfiction",
+        "isbn", "cover_url"
+    ]
+    return pd.DataFrame(list(books), columns=columns[:len(books[0])])
+
+
 def show_charts(books: list):
     """Display reading analytics given a list of book dicts."""
     if not books:
@@ -106,7 +132,7 @@ def show_extreme_books(books):
     """
 
     # Convert to DataFrame
-    df = pd.DataFrame(books)
+    df = books_to_df(books)
 
     # Clean up page counts
     df["pages"] = pd.to_numeric(df["pages"], errors="coerce")
