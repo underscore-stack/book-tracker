@@ -2,6 +2,19 @@
 import altair as alt
 import pandas as pd
 import streamlit as st
+import calendar
+
+months = df["month"].tolist()
+counts = df["count"].tolist()
+
+fig, ax = plt.subplots()
+ax.bar(months, counts)
+
+ax.set_xticks(range(1, 13))
+ax.set_xticklabels(calendar.month_abbr[1:13])
+
+ax.set_xlabel("Month")
+ax.set_ylabel("Books Finished")
 
 
 def show_charts(books: list):
