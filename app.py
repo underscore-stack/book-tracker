@@ -44,7 +44,7 @@ def refresh_library():
 # ------------------------------------------------------------
 # BASIC SETUP
 # ------------------------------------------------------------
-st.set_page_config(page_title="Book Tracker", layout="wide")
+st.set_page_config(page_title="Book Ttracker", layout="wide")
 
 
 def local_css(file_name: str) -> None:
