@@ -2,20 +2,6 @@
 import altair as alt
 import pandas as pd
 import streamlit as st
-import calendar
-
-months = df["month"].tolist()
-counts = df["count"].tolist()
-
-fig, ax = plt.subplots()
-ax.bar(months, counts)
-
-ax.set_xticks(range(1, 13))
-ax.set_xticklabels(calendar.month_abbr[1:13])
-
-ax.set_xlabel("Month")
-ax.set_ylabel("Books Finished")
-
 
 def show_charts(books: list):
     """Display reading analytics given a list of book dicts."""
@@ -41,22 +27,28 @@ def show_charts(books: list):
     st.header(f"📊 Reading Analytics ({len(books)} books)")
 
     with st.expander("📈 Show Charts", expanded=True):
+
+        MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
         # Pages per month
         pages_by_month = df.groupby(["year", "month_num"], observed=True)["pages"].sum().reset_index()
+        pages_by_month["month"] = pages_by_month["month_num"].apply(lambda m: MONTHS[int(m)-1])
+
         chart_pages = alt.Chart(pages_by_month).mark_line(point=True).encode(
-            x=alt.X("month_num:Q", axis=alt.Axis(title="Month", tickMinStep=1)),
+            x=alt.X("month:O", sort=MONTHS, axis=alt.Axis(title="Month")),
             y=alt.Y("pages:Q", title="Pages Read"),
             color="year:N",
-            tooltip=["year:N", "pages:Q"]
+            tooltip=["year:N", "month:O", "pages:Q"]
         ).properties(title="Pages Read per Month by Year")
 
         # Books per month
         books_by_month = df.groupby(["year", "month_num"], observed=True).size().reset_index(name="count")
+        books_by_month["month"] = books_by_month["month_num"].apply(lambda m: MONTHS[int(m)-1])
+        
         chart_books = alt.Chart(books_by_month).mark_bar().encode(
-            x=alt.X("month_num:Q", axis=alt.Axis(title="Month")),
+            x=alt.X("month:O", sort=MONTHS, axis=alt.Axis(title="Month")),
             y=alt.Y("count:Q", title="Books Read"),
             color="year:N",
-            tooltip=["year:N", "count:Q"]
+            tooltip=["year:N", "month:O", "count:Q"]
         ).properties(title="Books Read per Month")
 
         # Fiction vs Non-fiction
