@@ -14,6 +14,33 @@ from charts_view import show_charts, show_extreme_books
 from enrichment import enrich_book_metadata
 
 
+# =========================
+# STATE (Session Initialization)
+# =========================
+
+if "filtered_books" not in st.session_state:
+    st.session_state["filtered_books"] = None
+
+if "ol_results" not in st.session_state:
+    st.session_state["ol_results"] = []
+
+if "ol_selected_work" not in st.session_state:
+    st.session_state["ol_selected_work"] = None
+
+if "ol_editions" not in st.session_state:
+    st.session_state["ol_editions"] = []
+
+if "last_added_id" not in st.session_state:
+    st.session_state["last_added_id"] = None
+
+if "reopen_book_id" not in st.session_state:
+    st.session_state["reopen_book_id"] = None
+
+def refresh_library():
+    st.cache_data.clear()
+    st.session_state.pop("filtered_books", None)
+    st.rerun()
+    
 # ------------------------------------------------------------
 # BASIC SETUP
 # ------------------------------------------------------------
@@ -94,11 +121,15 @@ reset_filters = st.sidebar.button("Reset Filters", type="primary")
 
 
 if reset_filters:
-    st.session_state["filtered_books"] = get_all_books()
-    st.rerun()
+    for k in [
+        "f_years", "f_months", "f_authors", "f_titles",
+        "f_genre", "f_tags", "f_type", "f_gender"
+    ]:
+        st.session_state.pop(k, None)
 
-if "filtered_books" not in st.session_state:
-    st.session_state["filtered_books"] = books
+    refresh_library()
+
+filtered_books = books
     
 if apply_filters:
     filtered = []
