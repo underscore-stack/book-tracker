@@ -116,14 +116,14 @@ def show_charts(books: list):
 
     #type chart
         pie_f = df["fiction_nonfiction"].value_counts().reset_index()
-        pie_f.columns = ["Fiction vs Non-fiction", "count"]
+        pie_f.columns = ["fiction_nonfiction", "count"]
         pie_chart_f = alt.Chart(pie_f).mark_arc(innerRadius=40).encode(
             theta="count:Q", color="fiction_nonfiction:N", tooltip=["Fiction vs Non-fiction", "count"]
         ).properties(title="Fiction vs Non-fiction")
 
     #gender chart
         pie_g = df["author_gender"].value_counts().reset_index()
-        pie_g.columns = ["Author Gender", "count"]
+        pie_g.columns = ["author_gender", "count"]
         pie_chart_g = alt.Chart(pie_g).mark_arc(innerRadius=40).encode(
             theta="count:Q", color="author_gender:N", tooltip=["Author Gender", "count"]
         ).properties(title="Author Gender Breakdown")
