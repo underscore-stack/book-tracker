@@ -434,6 +434,11 @@ with add_book_container:
 # ------------------------------------------------------------
 # CHARTS (RESPECTING FILTERED BOOKS)
 # ------------------------------------------------------------
+# Normalize books (get_all_books can return None on failure)
+if books is None:
+    st.warning("⚠️ No books returned (books is None).")
+    books = []
+
 st.session_state.setdefault("selected_book", None)
 show_extreme_books(books)
 show_charts(books)
