@@ -70,7 +70,7 @@ def show_charts(books: list):
         if df.empty:
             st.info("No data for charts yet.")
             return
-
+    #pages by month
         pages_by_month = (
             df.groupby(["year", "month_num"], observed=True)["pages"]
               .sum()
@@ -85,6 +85,7 @@ def show_charts(books: list):
             tooltip=["year:N", "month:N", "pages:Q"],
         ).properties(title="Pages Read per Month by Year")
 
+    #books by month
         books_by_month = (
             df.groupby(["year", "month_num"], observed=True)
               .size()
@@ -99,12 +100,29 @@ def show_charts(books: list):
             tooltip=["year:N", "month:N", "count:Q"],
         ).properties(title="Books Read per Month")
 
+    #books by year
+        # Books per year
+            books_by_year = (
+                df.groupby(["year"], observed=True)
+                  .size()
+                  .reset_index(name="count")
+                  .sort_values("year")
+            )
+            
+            chart_books_year = alt.Chart(books_by_year).mark_bar().encode(
+                x=alt.X("year:N", sort=None, axis=alt.Axis(title="Year")),
+                y=alt.Y("count:Q", title="Books Read"),
+                tooltip=["year:N", "count:Q"],
+            ).properties(title="Books Read per Year")
+
+    #type chart
         pie_f = df["fiction_nonfiction"].value_counts().reset_index()
         pie_f.columns = ["fiction_nonfiction", "count"]
         pie_chart_f = alt.Chart(pie_f).mark_arc(innerRadius=40).encode(
             theta="count:Q", color="fiction_nonfiction:N", tooltip=["fiction_nonfiction", "count"]
         ).properties(title="Fiction vs Non-fiction")
 
+    #gender chart
         pie_g = df["author_gender"].value_counts().reset_index()
         pie_g.columns = ["author_gender", "count"]
         pie_chart_g = alt.Chart(pie_g).mark_arc(innerRadius=40).encode(
@@ -113,6 +131,8 @@ def show_charts(books: list):
 
         st.altair_chart(chart_pages, use_container_width=True)
         st.altair_chart(chart_books, use_container_width=True)
+        st.altair_chart(chart_books_year, use_container_width=True)
+
         c1, c2 = st.columns(2)
         with c1:
             st.altair_chart(pie_chart_f, use_container_width=True)
