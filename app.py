@@ -17,9 +17,8 @@ from enrichment import enrich_book_metadata
 # =========================
 # STATE (Session Initialization)
 # =========================
-
-if "filtered_books" not in st.session_state:
-    st.session_state["filtered_books"] = None
+if "filtered_books" not in st.session_state or st.session_state["filtered_books"] is None:
+    st.session_state["filtered_books"] = books
 
 if "ol_results" not in st.session_state:
     st.session_state["ol_results"] = []
@@ -127,6 +126,10 @@ if reset_filters:
         "f_genre", "f_tags", "f_type", "f_gender"
     ]:
         st.session_state.pop(k, None)
+
+    # IMPORTANT: reset the filtered result itself
+    st.session_state.pop("filtered_books", None)   # or set it to books (see below)
+    st.rerun()
 
     refresh_library()
 
