@@ -17,9 +17,6 @@ from enrichment import enrich_book_metadata
 # =========================
 # STATE (Session Initialization)
 # =========================
-if "filtered_books" not in st.session_state or st.session_state["filtered_books"] is None:
-    st.session_state["filtered_books"] = books
-
 if "ol_results" not in st.session_state:
     st.session_state["ol_results"] = []
 
@@ -75,7 +72,8 @@ def load_books():
 
 books = load_books()
 st.caption(f"Loaded {len(books)} books")
-
+if "filtered_books" not in st.session_state or st.session_state["filtered_books"] is None:
+    st.session_state["filtered_books"] = books
 
 # ---------------------------------
 # Sidebar Filters
