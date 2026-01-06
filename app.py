@@ -75,6 +75,7 @@ def load_books():
 
 
 books = load_books()
+st.caption(f"Loaded {len(books)} books")
 
 
 # ---------------------------------
