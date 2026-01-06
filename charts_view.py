@@ -87,7 +87,7 @@ def show_charts(books: list):
         )
         
         pages_by_month["month"] = pages_by_month["month_num"].apply(
-            lambda m: MONTHS[int(m)-1])
+            lambda m: MONTHS[int(m)-1]
         )
         
         chart_pages = alt.Chart(pages_by_month).mark_line(point=True).encode(
@@ -109,7 +109,7 @@ def show_charts(books: list):
         )
         
         books_by_month["month"] = books_by_month["month_num"].apply(
-            lambda m: MONTHS[int(m)-1])
+            lambda m: MONTHS[int(m)-1]
         )
         
         chart_books = alt.Chart(books_by_month).mark_bar().encode(
