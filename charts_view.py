@@ -101,19 +101,18 @@ def show_charts(books: list):
         ).properties(title="Books Read per Month")
 
     #books by year
-        # Books per year
-            books_by_year = (
-                df.groupby(["year"], observed=True)
-                  .size()
-                  .reset_index(name="count")
-                  .sort_values("year")
-            )
-            
-            chart_books_year = alt.Chart(books_by_year).mark_bar().encode(
-                x=alt.X("year:N", sort=None, axis=alt.Axis(title="Year")),
-                y=alt.Y("count:Q", title="Books Read"),
-                tooltip=["year:N", "count:Q"],
-            ).properties(title="Books Read per Year")
+        books_by_year = (
+            df.groupby(["year"], observed=True)
+              .size()
+              .reset_index(name="count")
+              .sort_values("year")
+        )
+        
+        chart_books_year = alt.Chart(books_by_year).mark_bar().encode(
+            x=alt.X("year:N", sort=None, axis=alt.Axis(title="Year")),
+            y=alt.Y("count:Q", title="Books Read"),
+            tooltip=["year:N", "count:Q"],
+        ).properties(title="Books Read per Year")
 
     #type chart
         pie_f = df["fiction_nonfiction"].value_counts().reset_index()
