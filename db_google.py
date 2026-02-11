@@ -54,11 +54,12 @@ def get_all_books():
     for r in rows:
         r["word_count"] = int(r["word_count"]) if r.get("word_count") else None
     return list(reversed(rows))
-
+    
 def add_book(book):
     sheet = _get_sheet()
     rows = sheet.get_all_records()
-    new_id = len(rows) + 1
+    existing_ids = [int(r["id"]) for r in rows if str(r.get("id", "")).isdigit()]
+    new_id = (max(existing_ids) + 1) if existing_ids else 1
     row = [
         new_id,
         book.get("title", ""),
