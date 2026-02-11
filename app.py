@@ -102,16 +102,16 @@ authors = sorted({safe_str(b.get("author", "")) for b in books if b.get("author"
 titles = sorted({safe_str(b.get("title", "")) for b in books if b.get("title")})
 
 
-f_years = st.sidebar.multiselect("Year finished", years)
-f_months = st.sidebar.multiselect("Month finished", months)
-f_authors = st.sidebar.multiselect("Author", authors)
-f_titles = st.sidebar.multiselect("Title", titles)
+f_years = st.sidebar.multiselect("Year finished", years, key="f_years")
+f_months = st.sidebar.multiselect("Month finished", months, key="f_months")
+f_authors = st.sidebar.multiselect("Author", authors, key="f_authors")
+f_titles = st.sidebar.multiselect("Title", titles, key="f_titles")
 
-f_genre = st.sidebar.text_input("Genre contains")
-f_tags = st.sidebar.text_input("Tags contains")
+f_genre = st.sidebar.text_input("Genre contains", key="f_genre")
+f_tags = st.sidebar.text_input("Tags contains", key="f_tags")
 
-f_type = st.sidebar.radio("Type", ["All", "Fiction", "Non-fiction"], index=0)
-f_gender = st.sidebar.multiselect("Author gender", ["Male", "Female", "Other"])
+f_type = st.sidebar.radio("Type", ["All", "Fiction", "Non-fiction"], index=0, key="f_type")
+f_gender = st.sidebar.multiselect("Author gender", ["Male", "Female", "Other"], key="f_gender")
 
 apply_filters = st.sidebar.button("Apply Filters", type="primary")
 
@@ -125,11 +125,9 @@ if reset_filters:
     ]:
         st.session_state.pop(k, None)
 
-    # IMPORTANT: reset the filtered result itself
-    st.session_state.pop("filtered_books", None)   # or set it to books (see below)
+    st.session_state.pop("filtered_books", None)
+    st.cache_data.clear()
     st.rerun()
-
-    refresh_library()
 
 filtered_books = books
     
