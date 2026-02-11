@@ -49,4 +49,4 @@ div[data-testid="stHorizontalBlock"] > div:nth-child(2) p {
 }
 #add-book-area div[data-testid="stVerticalBlockBorderWrapper"] {
     margin-left: 2rem !important;
-
+}
