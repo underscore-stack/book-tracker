@@ -11,7 +11,7 @@ pandas
 altair
 gspread
 openai
-google-generativeai>=0.6.0
+google-genai>=0.3.0
 
 # Add other dependencies used in the repo here, pinned to tested versions.
 # If you rely on SQLite builtin, no separate dependency is required.
