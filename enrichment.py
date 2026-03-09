@@ -73,7 +73,7 @@ Do not repeat existing values. Return ONLY the JSON object, no other text.
         
         # Generate content using the new SDK
         response = client.models.generate_content(
-            model='gemini-2.0-flash-exp',
+            model='gemini-2.0-flash',
             contents=prompt,
             config=GenerateContentConfig(
                 temperature=0.3,
@@ -109,3 +109,4 @@ Do not repeat existing values. Return ONLY the JSON object, no other text.
         
     except Exception as e:
         return {"error": f"Gemini enrichment failed: {e}"}
+
