@@ -5,8 +5,7 @@ import os
 import json
 import re
 import streamlit as st
-from google import genai
-from google.genai.types import GenerateContentConfig, GoogleSearch
+import anthropic
 from datetime import datetime
 from openlibrary_local import fetch_detailed_metadata
 
@@ -24,32 +23,31 @@ def clean_gpt_json(text: str) -> str:
 
 def enrich_book_metadata(title, author, isbn, existing=None):
     """
-    Enriches book metadata using the new Google Gen AI SDK.
+    Enriches book metadata using the Anthropic Claude API.
     Only fills missing fields from the 'existing' dict.
-    
+
     Args:
         title: Book title
         author: Book author
         isbn: ISBN (optional)
         existing: Dict of existing metadata fields
-    
+
     Returns:
         Dict with enriched metadata or {"error": "..."} on failure
     """
     existing = existing or {}
-    
+
     try:
         # Get API key from Streamlit secrets
-        api_key = st.secrets["gemini"]["api_key"]
-        
-        # Initialize the client with the new SDK
-        client = genai.Client(api_key=api_key)
-        
+        api_key = st.secrets["anthropic"]["api_key"]
+
+        # Initialize the Anthropic client
+        client = anthropic.Anthropic(api_key=api_key)
+
         # Identify which fields are missing
         missing_fields = [k for k, v in existing.items() if not v]
-        
-        prompt = f"""
-You are a book metadata specialist. Fill in ONLY missing metadata fields for:
+
+        prompt = f"""You are a book metadata specialist. Fill in ONLY missing metadata fields for:
 Title: {title}
 Author: {author}
 ISBN: {isbn}
@@ -68,30 +66,30 @@ Provide a JSON object with these fields (only fill in values for missing fields)
 - author_gender (one of: "Male", "Female", "Nonbinary", "Multiple", "Unknown", or empty string)
 - tags (array of strings, max 5 relevant subject tags)
 
-Do not repeat existing values. Return ONLY the JSON object, no other text.
-"""
-        
-        # Generate content using the new SDK
-        response = client.models.generate_content(
-            model='gemini-2.0-flash',
-            contents=prompt,
-            config=GenerateContentConfig(
-                temperature=0.3,
-                response_mime_type="application/json"
-            )
+Do not repeat existing values. Return ONLY the JSON object, no other text."""
+
+        # Call Claude API
+        response = client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=1024,
+            thinking={"type": "adaptive"},
+            messages=[{"role": "user", "content": prompt}]
         )
-        
+
         # Extract text from response
-        text = response.text.strip()
-        
+        text = next(
+            (block.text for block in response.content if block.type == "text"),
+            ""
+        ).strip()
+
         # Clean and parse JSON
         cleaned_text = clean_gpt_json(text)
-        
+
         try:
             enriched = json.loads(cleaned_text)
         except json.JSONDecodeError as e:
             return {"error": f"Failed to parse AI response as JSON: {e}\nRaw: {text}"}
-        
+
         # Merge with existing (preserve existing non-empty fields)
         final = {
             "publisher": existing.get("publisher") or enriched.get("publisher", ""),
@@ -104,9 +102,8 @@ Do not repeat existing values. Return ONLY the JSON object, no other text.
             "isbn": existing.get("isbn") or enriched.get("isbn", isbn),
             "cover_url": existing.get("cover_url") or enriched.get("cover_url", ""),
         }
-        
-        return final
-        
-    except Exception as e:
-        return {"error": f"Gemini enrichment failed: {e}"}
 
+        return final
+
+    except Exception as e:
+        return {"error": f"Claude enrichment failed: {e}"}
