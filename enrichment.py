@@ -38,11 +38,14 @@ def enrich_book_metadata(title, author, isbn, existing=None):
     existing = existing or {}
 
     try:
-        # Get API key from Streamlit secrets
-        api_key = st.secrets["anthropic"]["api_key"]
+        # Get API key from Streamlit secrets, falling back to ANTHROPIC_API_KEY env var
+        api_key = (
+            st.secrets.get("anthropic", {}).get("api_key")
+            or os.environ.get("ANTHROPIC_API_KEY")
+        )
 
         # Initialize the Anthropic client
-        client = anthropic.Anthropic(api_key=api_key)
+        client = anthropic.Anthropic(api_key=api_key) if api_key else anthropic.Anthropic()
 
         # Identify which fields are missing
         missing_fields = [k for k, v in existing.items() if not v]
@@ -107,4 +110,5 @@ Do not repeat existing values. Return ONLY the JSON object, no other text."""
 
     except Exception as e:
         return {"error": f"Claude enrichment failed: {e}"}
+
 
