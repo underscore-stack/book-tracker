@@ -70,7 +70,7 @@ Do not repeat existing values. Return ONLY the JSON object, no other text."""
 
         # Call Claude API
         response = client.messages.create(
-            model="claude-opus-4-6",
+            model="claude-haiku-4-5",
             max_tokens=1024,
             thinking={"type": "adaptive"},
             messages=[{"role": "user", "content": prompt}]
@@ -107,3 +107,4 @@ Do not repeat existing values. Return ONLY the JSON object, no other text."""
 
     except Exception as e:
         return {"error": f"Claude enrichment failed: {e}"}
+
