@@ -417,6 +417,8 @@ with add_book_container:
                             book_data["isbn"] or book_data["title"]
                         )
                         refresh_library()
+                        st.cache_data.clear()
+                        st.rerun()
                     except Exception as e:
                         st.error(f"Failed to add book: {e}")
             st.markdown("</div>", unsafe_allow_html=True)
