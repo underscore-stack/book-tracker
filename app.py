@@ -658,7 +658,7 @@ for y in sorted(grouped.keys(), reverse=True):
                                 "🔍 Enrich Metadata", key=f"enrich_{detail_key}"
                             ):
                                 with st.spinner(
-                                    "Contacting Gemini to fill in missing info..."
+                                    "Contacting Claude to fill in missing info..."
                                 ):
                                     existing = {
                                         "publisher": b.get("publisher"),

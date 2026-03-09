@@ -3,53 +3,40 @@ load_dotenv()
 
 import os
 import json
-import re
 import streamlit as st
-from google import genai
-from google.genai.types import GenerateContentConfig, GoogleSearch
-from datetime import datetime
+import anthropic
 from openlibrary_local import fetch_detailed_metadata
-
-def clean_gpt_json(text: str) -> str:
-    """Strip markdown-style code fences and stray backticks before parsing."""
-    if not text:
-        return "{}"
-    # Remove triple backtick code fences like ```json ... ```
-    text = re.sub(r"^```[a-zA-Z]*\n?", "", text.strip())
-    text = re.sub(r"```$", "", text.strip())
-    # Remove stray single backticks
-    text = text.replace("`", "")
-    return text
 
 
 def enrich_book_metadata(title, author, isbn, existing=None):
     """
-    Enriches book metadata using the new Google Gen AI SDK.
+    Enriches book metadata using the Claude API.
     Only fills missing fields from the 'existing' dict.
-    
+
     Args:
         title: Book title
         author: Book author
         isbn: ISBN (optional)
         existing: Dict of existing metadata fields
-    
+
     Returns:
         Dict with enriched metadata or {"error": "..."} on failure
     """
     existing = existing or {}
-    
+
     try:
-        # Get API key from Streamlit secrets
-        api_key = st.secrets["gemini"]["api_key"]
-        
-        # Initialize the client with the new SDK
-        client = genai.Client(api_key=api_key)
-        
-        # Identify which fields are missing
+        # Prefer key from Streamlit secrets, fall back to environment variable
+        api_key = None
+        try:
+            api_key = st.secrets["anthropic"]["api_key"]
+        except Exception:
+            api_key = os.environ.get("ANTHROPIC_API_KEY")
+
+        client = anthropic.Anthropic(api_key=api_key) if api_key else anthropic.Anthropic()
+
         missing_fields = [k for k, v in existing.items() if not v]
-        
-        prompt = f"""
-You are a book metadata specialist. Fill in ONLY missing metadata fields for:
+
+        prompt = f"""You are a book metadata specialist. Fill in ONLY missing metadata fields for:
 Title: {title}
 Author: {author}
 ISBN: {isbn}
@@ -59,7 +46,7 @@ Existing metadata:
 
 Missing fields that need filling: {', '.join(missing_fields) if missing_fields else 'none'}
 
-Provide a JSON object with these fields (only fill in values for missing fields):
+Return a JSON object with these fields (only fill in values for missing fields):
 - publisher (string)
 - pub_year (integer or null)
 - pages (integer or null)
@@ -68,30 +55,28 @@ Provide a JSON object with these fields (only fill in values for missing fields)
 - author_gender (one of: "Male", "Female", "Nonbinary", "Multiple", "Unknown", or empty string)
 - tags (array of strings, max 5 relevant subject tags)
 
-Do not repeat existing values. Return ONLY the JSON object, no other text.
-"""
-        
-        # Generate content using the new SDK
-        response = client.models.generate_content(
-            model='gemini-2.0-flash',
-            contents=prompt,
-            config=GenerateContentConfig(
-                temperature=0.3,
-                response_mime_type="application/json"
-            )
+Do not repeat existing values. Return ONLY the JSON object, no other text."""
+
+        response = client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
         )
-        
-        # Extract text from response
-        text = response.text.strip()
-        
-        # Clean and parse JSON
-        cleaned_text = clean_gpt_json(text)
-        
+
+        text = response.content[0].text.strip()
+
+        # Strip markdown code fences if present
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+            text = text.strip()
+
         try:
-            enriched = json.loads(cleaned_text)
+            enriched = json.loads(text)
         except json.JSONDecodeError as e:
             return {"error": f"Failed to parse AI response as JSON: {e}\nRaw: {text}"}
-        
+
         # Merge with existing (preserve existing non-empty fields)
         final = {
             "publisher": existing.get("publisher") or enriched.get("publisher", ""),
@@ -104,8 +89,8 @@ Do not repeat existing values. Return ONLY the JSON object, no other text.
             "isbn": existing.get("isbn") or enriched.get("isbn", isbn),
             "cover_url": existing.get("cover_url") or enriched.get("cover_url", ""),
         }
-        
+
         return final
-        
+
     except Exception as e:
-        return {"error": f"Gemini enrichment failed: {e}"}
+        return {"error": f"Claude enrichment failed: {e}"}
