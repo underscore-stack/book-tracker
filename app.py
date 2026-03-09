@@ -416,6 +416,7 @@ with add_book_container:
                         st.session_state["last_added_id"] = (
                             book_data["isbn"] or book_data["title"]
                         )
+                        refresh_library()
                         st.cache_data.clear()
                         st.rerun()
                     except Exception as e:
@@ -623,7 +624,8 @@ for y in sorted(grouped.keys(), reverse=True):
                     
                                             st.success("Changes saved.")
                                             st.session_state[edit_key] = False
-                    
+                                            st.rerun()
+
                                         except Exception as e:
                                             st.error(f"Could not update Google Sheet: {e}")
                     
@@ -722,6 +724,7 @@ for y in sorted(grouped.keys(), reverse=True):
                                         st.success(
                                             "✅ Missing metadata filled and saved."
                                         )
+                                        st.rerun()
                                     except Exception as e:
                                         st.error(
                                             f"Could not update Google Sheet: {e}"
