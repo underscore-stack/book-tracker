@@ -416,6 +416,7 @@ with add_book_container:
                         st.session_state["last_added_id"] = (
                             book_data["isbn"] or book_data["title"]
                         )
+                        st.cache_data.clear()
                         st.rerun()
                     except Exception as e:
                         st.error(f"Failed to add book: {e}")
