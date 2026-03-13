@@ -1,6 +1,3 @@
-from dotenv import load_dotenv
-load_dotenv()
-
 import os
 import json
 import re
@@ -37,17 +34,20 @@ def enrich_book_metadata(title, author, isbn, existing=None):
     """
     existing = existing or {}
     try:
-        # Get API key: env var takes priority over Streamlit secrets
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        # Get API key: session state (user-entered) → env var → Streamlit secrets
+        api_key = st.session_state.get("anthropic_api_key", "").strip() or None
+
+        if not api_key:
+            api_key = os.environ.get("ANTHROPIC_API_KEY") or None
 
         if not api_key:
             try:
-                api_key = st.secrets["anthropic"]["api_key"]
-            except (KeyError, FileNotFoundError):
+                api_key = st.secrets["anthropic"]["api_key"] or None
+            except (KeyError, FileNotFoundError, AttributeError):
                 api_key = None
 
         if not api_key:
-            return {"error": "No Anthropic API key found in environment or Streamlit secrets."}
+            return {"error": "No Anthropic API key configured. Enter your API key in the sidebar."}
 
         # Initialize the Anthropic client
         client = anthropic.Anthropic(api_key=api_key)
