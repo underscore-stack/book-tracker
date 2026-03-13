@@ -17,6 +17,9 @@ from enrichment import enrich_book_metadata
 # =========================
 # STATE (Session Initialization)
 # =========================
+if "anthropic_api_key" not in st.session_state:
+    st.session_state["anthropic_api_key"] = ""
+
 if "ol_results" not in st.session_state:
     st.session_state["ol_results"] = []
 
@@ -79,6 +82,19 @@ if "filtered_books" not in st.session_state or st.session_state["filtered_books"
 # Sidebar Filters
 # ---------------------------------
 st.sidebar.header("Filter Library")
+
+# API Key configuration
+with st.sidebar.expander("⚙️ Claude API Key", expanded=not st.session_state["anthropic_api_key"]):
+    entered_key = st.text_input(
+        "Anthropic API Key",
+        value=st.session_state["anthropic_api_key"],
+        type="password",
+        placeholder="sk-ant-...",
+        help="Required for 'Enrich Metadata'. Get your key at console.anthropic.com",
+        key="_api_key_input",
+    )
+    if entered_key != st.session_state["anthropic_api_key"]:
+        st.session_state["anthropic_api_key"] = entered_key
 
 def safe_str(x):
     """Normalize all values to clean strings."""
