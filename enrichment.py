@@ -38,10 +38,10 @@ def enrich_book_metadata(title, author, isbn, existing=None):
     existing = existing or {}
 
     try:
-        # Get API key from Streamlit secrets, falling back to ANTHROPIC_API_KEY env var
+        # Get API key: env var takes priority over Streamlit secrets
         api_key = (
-            st.secrets.get("anthropic", {}).get("api_key")
-            or os.environ.get("ANTHROPIC_API_KEY")
+            os.environ.get("ANTHROPIC_API_KEY")
+            or st.secrets.get("anthropic", {}).get("api_key")
         )
 
         # Initialize the Anthropic client
@@ -73,9 +73,8 @@ Do not repeat existing values. Return ONLY the JSON object, no other text."""
 
         # Call Claude API
         response = client.messages.create(
-            model="claude-haiku-4-5",
+            model="claude-haiku-4-5-20251001",
             max_tokens=1024,
-            thinking={"type": "adaptive"},
             messages=[{"role": "user", "content": prompt}]
         )
 
