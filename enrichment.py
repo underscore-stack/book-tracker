@@ -51,7 +51,7 @@ def enrich_book_metadata(title, author, isbn, existing=None):
     
             # Initialize the Anthropic client
             client = anthropic.Anthropic(api_key=api_key)
-    
+        
             # Identify which fields are missing
             missing_fields = [k for k, v in existing.items() if not v]
 
@@ -114,6 +114,7 @@ Do not repeat existing values. Return ONLY the JSON object, no other text."""
 
     except Exception as e:
         return {"error": f"Claude enrichment failed: {e}"}
+
 
 
 
