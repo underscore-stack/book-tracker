@@ -37,23 +37,23 @@ def enrich_book_metadata(title, author, isbn, existing=None):
     """
     existing = existing or {}
     try:
-            # Get API key: env var takes priority over Streamlit secrets
-            api_key = os.environ.get("ANTHROPIC_API_KEY")
-    
-            if not api_key:
-                try:
-                    api_key = st.secrets["anthropic"]["api_key"]
-                except (KeyError, FileNotFoundError):
-                    api_key = None
-    
-            if not api_key:
-                return {"error": "No Anthropic API key found in environment or Streamlit secrets."}
-    
-            # Initialize the Anthropic client
-            client = anthropic.Anthropic(api_key=api_key)
-        
-            # Identify which fields are missing
-            missing_fields = [k for k, v in existing.items() if not v]
+        # Get API key: env var takes priority over Streamlit secrets
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+
+        if not api_key:
+            try:
+                api_key = st.secrets["anthropic"]["api_key"]
+            except (KeyError, FileNotFoundError):
+                api_key = None
+
+        if not api_key:
+            return {"error": "No Anthropic API key found in environment or Streamlit secrets."}
+
+        # Initialize the Anthropic client
+        client = anthropic.Anthropic(api_key=api_key)
+
+        # Identify which fields are missing
+        missing_fields = [k for k, v in existing.items() if not v]
 
         prompt = f"""You are a book metadata specialist. Fill in ONLY missing metadata fields for:
 Title: {title}
